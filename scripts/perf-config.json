@@ -1,0 +1,52 @@
+{
+  "apiBase": "http://localhost:3001/api",
+  "samples": 30,
+  "concurrent": 1,
+  "timeout": 30000,
+  "outputDir": "perf-results",
+  "endpoints": {
+    "chat/stream": {
+      "enabled": true,
+      "weight": 0.8,
+      "expectedLatency": {
+        "p95": 2000,
+        "mean": 1000
+      },
+      "expectedTokens": {
+        "input": 150,
+        "output": 100
+      }
+    },
+    "notes/auto": {
+      "enabled": false,
+      "weight": 0.2,
+      "expectedLatency": {
+        "p95": 1500,
+        "mean": 800
+      },
+      "expectedTokens": {
+        "input": 100,
+        "output": 50
+      }
+    }
+  },
+  "quality": {
+    "baselineThreshold": 65.2,
+    "regressionThreshold": -2.0,
+    "enableQualityCheck": true
+  },
+  "optimization": {
+    "tokenReductionTarget": 0.10,
+    "latencyReductionTarget": 0.15,
+    "costReductionTarget": 0.12
+  },
+  "reporting": {
+    "formats": ["json", "csv", "table"],
+    "includeRawData": true,
+    "generateCharts": false
+  },
+  "rateLimit": {
+    "requestsPerSecond": 2,
+    "burstLimit": 5
+  }
+}

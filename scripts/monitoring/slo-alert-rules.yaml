@@ -1,0 +1,675 @@
+# FlowReader SLO Alert Rules Configuration
+# This file defines comprehensive alert rules for SLO compliance monitoring
+
+metadata:
+  name: "flowreader-slo-alerts"
+  version: "1.0"
+  created: "2024-09-19"
+  description: "SLO-based alerting rules for FlowReader production monitoring"
+  tags: ["slo", "alerting", "production", "compliance"]
+
+# Global alert configuration
+global:
+  evaluation_interval: 30s
+  notification_timeout: 10s
+  resolve_timeout: 5m
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+# SLO targets and thresholds
+slo_targets:
+  availability:
+    target: 99.5
+    warning: 99.8
+    critical: 99.5
+    measurement_window: "30d"
+    unit: "percent"
+
+  p95_latency:
+    target: 1500
+    warning: 2000
+    critical: 2500
+    measurement_window: "24h"
+    unit: "milliseconds"
+
+  p99_latency:
+    target: 2500
+    warning: 3000
+    critical: 4000
+    measurement_window: "24h"
+    unit: "milliseconds"
+
+  error_rate:
+    target: 1.0
+    warning: 2.0
+    critical: 5.0
+    measurement_window: "24h"
+    unit: "percent"
+
+  dialog_success_rate:
+    target: 95.0
+    warning: 90.0
+    critical: 85.0
+    measurement_window: "24h"
+    unit: "percent"
+
+  security_compliance:
+    target: 100.0
+    warning: 99.0
+    critical: 95.0
+    measurement_window: "24h"
+    unit: "percent"
+
+# Error budget configurations
+error_budgets:
+  availability:
+    budget_percent: 0.5  # 99.5% = 0.5% error budget
+    measurement_window: "30d"
+    burn_rate_windows:
+      fast: "1h"
+      medium: "6h"
+      slow: "24h"
+
+  api_availability:
+    budget_percent: 0.1  # 99.9% = 0.1% error budget
+    measurement_window: "7d"
+    burn_rate_windows:
+      fast: "5m"
+      medium: "1h"
+      slow: "6h"
+
+  error_rate:
+    budget_percent: 1.0
+    measurement_window: "24h"
+    burn_rate_windows:
+      fast: "5m"
+      medium: "30m"
+      slow: "2h"
+
+# Alert rule groups
+groups:
+  - name: "slo-availability-alerts"
+    interval: 30s
+    rules:
+      # Critical availability alerts
+      - alert: "SLOViolation_SystemAvailability_Critical"
+        expr: 'slo_availability_percentage < 99.5'
+        for: 0m
+        severity: critical
+        priority: P1
+        labels:
+          service: "flowreader"
+          slo: "availability"
+          impact: "customer_facing"
+          team: "sre"
+        annotations:
+          summary: "System availability SLO violation"
+          description: "System availability is {{ $value }}%, below the 99.5% SLO target"
+          runbook: "https://docs.company.com/runbooks/availability-slo-violation"
+          dashboard: "https://monitoring.company.com/slo-dashboard"
+          impact: "All users experiencing service unavailability"
+          action_required: "Immediate investigation and mitigation required"
+
+      # Warning availability alerts
+      - alert: "SLOWarning_SystemAvailability"
+        expr: 'slo_availability_percentage < 99.8 and slo_availability_percentage >= 99.5'
+        for: 10m
+        severity: warning
+        priority: P2
+        labels:
+          service: "flowreader"
+          slo: "availability"
+          impact: "customer_facing"
+          team: "sre"
+        annotations:
+          summary: "System availability approaching SLO limit"
+          description: "System availability is {{ $value }}%, approaching the 99.5% SLO limit"
+          runbook: "https://docs.company.com/runbooks/availability-warning"
+          dashboard: "https://monitoring.company.com/slo-dashboard"
+          impact: "Service degradation risk"
+          action_required: "Monitor closely and prepare for mitigation"
+
+      # Health check failure
+      - alert: "HealthCheck_Failure"
+        expr: 'health_check_success_rate < 95'
+        for: 3m
+        severity: critical
+        priority: P1
+        labels:
+          service: "flowreader"
+          component: "health_check"
+          impact: "availability"
+          team: "sre"
+        annotations:
+          summary: "Health check failure detected"
+          description: "Health check success rate is {{ $value }}%, indicating system unavailability"
+          runbook: "https://docs.company.com/runbooks/health-check-failure"
+          action_required: "Immediate system status investigation"
+
+  - name: "slo-latency-alerts"
+    interval: 30s
+    rules:
+      # Critical P95 latency alerts
+      - alert: "SLOViolation_P95Latency_Critical"
+        expr: 'p95_latency_milliseconds > 2500'
+        for: 0m
+        severity: critical
+        priority: P1
+        labels:
+          service: "flowreader"
+          slo: "p95_latency"
+          impact: "user_experience"
+          team: "sre"
+        annotations:
+          summary: "P95 latency SLO violation"
+          description: "P95 latency is {{ $value }}ms, exceeding the 2500ms critical threshold"
+          runbook: "https://docs.company.com/runbooks/latency-slo-violation"
+          dashboard: "https://monitoring.company.com/latency-dashboard"
+          impact: "Severe user experience degradation"
+          action_required: "Immediate performance investigation required"
+
+      # Warning P95 latency alerts
+      - alert: "SLOWarning_P95Latency"
+        expr: 'p95_latency_milliseconds > 2000 and p95_latency_milliseconds <= 2500'
+        for: 10m
+        severity: warning
+        priority: P2
+        labels:
+          service: "flowreader"
+          slo: "p95_latency"
+          impact: "user_experience"
+          team: "sre"
+        annotations:
+          summary: "P95 latency approaching SLO limit"
+          description: "P95 latency is {{ $value }}ms, approaching the 2500ms SLO limit"
+          runbook: "https://docs.company.com/runbooks/latency-warning"
+          action_required: "Performance optimization recommended"
+
+      # Critical P99 latency alerts
+      - alert: "SLOViolation_P99Latency_Critical"
+        expr: 'p99_latency_milliseconds > 4000'
+        for: 0m
+        severity: critical
+        priority: P1
+        labels:
+          service: "flowreader"
+          slo: "p99_latency"
+          impact: "user_experience"
+          team: "sre"
+        annotations:
+          summary: "P99 latency SLO violation"
+          description: "P99 latency is {{ $value }}ms, exceeding the 4000ms critical threshold"
+          runbook: "https://docs.company.com/runbooks/extreme-latency-violation"
+          impact: "Extreme latency affecting user experience"
+          action_required: "Emergency performance investigation"
+
+      # Latency trend degradation
+      - alert: "LatencyTrend_Degradation"
+        expr: 'increase(p95_latency_milliseconds[6h]) > 500'
+        for: 30m
+        severity: warning
+        priority: P3
+        labels:
+          service: "flowreader"
+          slo: "latency_trend"
+          team: "sre"
+        annotations:
+          summary: "Latency trend degradation detected"
+          description: "P95 latency has increased by {{ $value }}ms over the past 6 hours"
+          action_required: "Investigate performance trend degradation"
+
+  - name: "slo-error-rate-alerts"
+    interval: 30s
+    rules:
+      # Critical error rate alerts
+      - alert: "SLOViolation_ErrorRate_Critical"
+        expr: 'error_rate_percentage > 5.0'
+        for: 5m
+        severity: critical
+        priority: P1
+        labels:
+          service: "flowreader"
+          slo: "error_rate"
+          impact: "customer_facing"
+          team: "sre"
+        annotations:
+          summary: "Error rate SLO violation"
+          description: "Error rate is {{ $value }}%, exceeding the 5% critical threshold"
+          runbook: "https://docs.company.com/runbooks/error-rate-slo-violation"
+          dashboard: "https://monitoring.company.com/error-dashboard"
+          impact: "High error rate affecting user experience"
+          action_required: "Immediate error investigation and mitigation"
+
+      # Warning error rate alerts
+      - alert: "SLOWarning_ErrorRate"
+        expr: 'error_rate_percentage > 2.0 and error_rate_percentage <= 5.0'
+        for: 10m
+        severity: warning
+        priority: P2
+        labels:
+          service: "flowreader"
+          slo: "error_rate"
+          impact: "customer_facing"
+          team: "sre"
+        annotations:
+          summary: "Error rate approaching SLO limit"
+          description: "Error rate is {{ $value }}%, approaching the 5% SLO limit"
+          runbook: "https://docs.company.com/runbooks/error-rate-warning"
+          action_required: "Monitor error patterns and investigate if increasing"
+
+      # Error spike detection
+      - alert: "ErrorSpike_Detected"
+        expr: 'rate(error_count[5m]) > rate(error_count[1h] offset 1h) * 3'
+        for: 2m
+        severity: warning
+        priority: P2
+        labels:
+          service: "flowreader"
+          component: "error_detection"
+          team: "sre"
+        annotations:
+          summary: "Error spike detected"
+          description: "Error rate has increased 3x compared to the same time yesterday"
+          action_required: "Investigate sudden error increase"
+
+  - name: "slo-quality-alerts"
+    interval: 60s
+    rules:
+      # Dialog success rate alerts
+      - alert: "SLOViolation_DialogSuccessRate_Critical"
+        expr: 'dialog_success_rate_percentage < 85'
+        for: 10m
+        severity: critical
+        priority: P1
+        labels:
+          service: "flowreader"
+          slo: "dialog_success_rate"
+          impact: "user_experience"
+          team: "sre"
+        annotations:
+          summary: "Dialog success rate SLO violation"
+          description: "Dialog success rate is {{ $value }}%, below the 85% critical threshold"
+          runbook: "https://docs.company.com/runbooks/dialog-success-violation"
+          impact: "High dialog failure rate affecting user experience"
+          action_required: "Immediate AI/dialog system investigation"
+
+      - alert: "SLOWarning_DialogSuccessRate"
+        expr: 'dialog_success_rate_percentage < 90 and dialog_success_rate_percentage >= 85'
+        for: 15m
+        severity: warning
+        priority: P2
+        labels:
+          service: "flowreader"
+          slo: "dialog_success_rate"
+          team: "sre"
+        annotations:
+          summary: "Dialog success rate approaching SLO limit"
+          description: "Dialog success rate is {{ $value }}%, approaching critical levels"
+          action_required: "Investigate dialog quality degradation"
+
+  - name: "slo-security-alerts"
+    interval: 60s
+    rules:
+      # Security compliance alerts
+      - alert: "SLOViolation_SecurityCompliance_Critical"
+        expr: 'security_compliance_percentage < 95'
+        for: 5m
+        severity: critical
+        priority: P1
+        labels:
+          service: "flowreader"
+          slo: "security_compliance"
+          impact: "security"
+          team: "security"
+        annotations:
+          summary: "Security compliance SLO violation"
+          description: "Security compliance is {{ $value }}%, below the 95% critical threshold"
+          runbook: "https://docs.company.com/runbooks/security-compliance-violation"
+          impact: "Critical security posture degradation"
+          action_required: "Immediate security configuration review"
+
+      - alert: "SecurityHeader_Missing"
+        expr: 'security_headers_present < 5'
+        for: 1m
+        severity: warning
+        priority: P2
+        labels:
+          service: "flowreader"
+          component: "security_headers"
+          team: "security"
+        annotations:
+          summary: "Security headers missing"
+          description: "{{ $value }} security headers detected, expected 5"
+          action_required: "Review and fix missing security headers"
+
+  - name: "slo-error-budget-alerts"
+    interval: 60s
+    rules:
+      # Error budget consumption alerts
+      - alert: "ErrorBudget_Critical_Availability"
+        expr: 'error_budget_availability_consumed_percentage > 85'
+        for: 0m
+        severity: critical
+        priority: P1
+        labels:
+          service: "flowreader"
+          slo: "error_budget"
+          budget_type: "availability"
+          team: "sre"
+        annotations:
+          summary: "Availability error budget critically low"
+          description: "{{ $value }}% of availability error budget consumed (>85% threshold)"
+          runbook: "https://docs.company.com/runbooks/error-budget-critical"
+          impact: "Deployment freeze may be required"
+          action_required: "Stop non-critical deployments, focus on reliability"
+
+      - alert: "ErrorBudget_Warning_Availability"
+        expr: 'error_budget_availability_consumed_percentage > 50 and error_budget_availability_consumed_percentage <= 85'
+        for: 5m
+        severity: warning
+        priority: P2
+        labels:
+          service: "flowreader"
+          slo: "error_budget"
+          budget_type: "availability"
+          team: "sre"
+        annotations:
+          summary: "Availability error budget consumption elevated"
+          description: "{{ $value }}% of availability error budget consumed"
+          action_required: "Increase monitoring, review deployment practices"
+
+      # Fast burn rate alerts
+      - alert: "ErrorBudget_FastBurn_Availability"
+        expr: 'error_budget_burn_rate_availability_1h > 14.4'
+        for: 2m
+        severity: critical
+        priority: P1
+        labels:
+          service: "flowreader"
+          slo: "error_budget"
+          budget_type: "availability"
+          burn_type: "fast"
+          team: "sre"
+        annotations:
+          summary: "Fast error budget burn rate detected"
+          description: "Availability error budget burning at {{ $value }}x normal rate (>14.4x threshold)"
+          runbook: "https://docs.company.com/runbooks/fast-burn-rate"
+          impact: "Error budget will be exhausted in <6 hours at current rate"
+          action_required: "Immediate investigation and mitigation required"
+
+      # Slow burn rate alerts
+      - alert: "ErrorBudget_SlowBurn_Availability"
+        expr: 'error_budget_burn_rate_availability_6h > 1.0'
+        for: 15m
+        severity: warning
+        priority: P2
+        labels:
+          service: "flowreader"
+          slo: "error_budget"
+          budget_type: "availability"
+          burn_type: "slow"
+          team: "sre"
+        annotations:
+          summary: "Slow error budget burn rate detected"
+          description: "Availability error budget burning at {{ $value }}x normal rate"
+          action_required: "Investigate trends and plan reliability improvements"
+
+  - name: "slo-burn-rate-multiwindow"
+    interval: 30s
+    rules:
+      # Multi-window burn rate alerting (Google SRE recommended approach)
+      - alert: "ErrorBudgetBurn_MultiWindow_Fast"
+        expr: |
+          (
+            error_budget_burn_rate_1h > 14.4
+            and error_budget_burn_rate_5m > 14.4
+          )
+        for: 0m
+        severity: critical
+        priority: P1
+        labels:
+          service: "flowreader"
+          alert_type: "multiwindow_burn_rate"
+          burn_speed: "fast"
+          team: "sre"
+        annotations:
+          summary: "Fast multi-window error budget burn"
+          description: "Error budget burning fast in both 1h ({{ $labels.error_budget_burn_rate_1h }}) and 5m ({{ $labels.error_budget_burn_rate_5m }}) windows"
+          action_required: "Immediate incident response required"
+
+      - alert: "ErrorBudgetBurn_MultiWindow_Slow"
+        expr: |
+          (
+            error_budget_burn_rate_6h > 1.0
+            and error_budget_burn_rate_30m > 1.0
+          )
+        for: 15m
+        severity: warning
+        priority: P2
+        labels:
+          service: "flowreader"
+          alert_type: "multiwindow_burn_rate"
+          burn_speed: "slow"
+          team: "sre"
+        annotations:
+          summary: "Slow multi-window error budget burn"
+          description: "Error budget burning in both 6h and 30m windows"
+          action_required: "Investigate and plan improvements"
+
+  - name: "slo-composite-alerts"
+    interval: 60s
+    rules:
+      # Composite SLO health score
+      - alert: "SLOHealth_Composite_Critical"
+        expr: 'slo_composite_health_score < 85'
+        for: 5m
+        severity: critical
+        priority: P1
+        labels:
+          service: "flowreader"
+          alert_type: "composite_slo"
+          team: "sre"
+        annotations:
+          summary: "Composite SLO health critically low"
+          description: "Overall SLO health score is {{ $value }}/100, below critical threshold"
+          dashboard: "https://monitoring.company.com/composite-slo-dashboard"
+          impact: "Multiple SLO violations affecting overall service quality"
+          action_required: "Emergency SLO recovery procedures required"
+
+      # Multiple SLO violations
+      - alert: "MultipleSLO_Violations"
+        expr: 'count by (service) (ALERTS{service="flowreader", alertname=~"SLOViolation_.*", alertstate="firing"}) >= 2'
+        for: 5m
+        severity: critical
+        priority: P1
+        labels:
+          service: "flowreader"
+          alert_type: "multiple_violations"
+          team: "sre"
+        annotations:
+          summary: "Multiple SLO violations detected"
+          description: "{{ $value }} SLO violations are currently active"
+          impact: "System experiencing widespread issues"
+          action_required: "Major incident response required"
+
+# Notification routing
+notification_channels:
+  # Critical alerts - immediate response
+  critical_channels:
+    - name: "pagerduty-sre"
+      type: "pagerduty"
+      config:
+        integration_key: "${PAGERDUTY_SRE_KEY}"
+        severity: "critical"
+        client: "flowreader-slo-monitor"
+
+    - name: "slack-sre-critical"
+      type: "slack"
+      config:
+        webhook_url: "${SLACK_SRE_CRITICAL_WEBHOOK}"
+        channel: "#sre-critical-alerts"
+        username: "SLO Monitor"
+        title: "🚨 FlowReader SLO Critical Alert"
+        text: "{{ .CommonAnnotations.summary }}"
+        color: "danger"
+
+    - name: "phone-oncall"
+      type: "webhook"
+      config:
+        url: "${ONCALL_PHONE_WEBHOOK}"
+        method: "POST"
+        headers:
+          Content-Type: "application/json"
+
+  # Warning alerts
+  warning_channels:
+    - name: "slack-sre-alerts"
+      type: "slack"
+      config:
+        webhook_url: "${SLACK_SRE_ALERTS_WEBHOOK}"
+        channel: "#sre-alerts"
+        username: "SLO Monitor"
+        title: "⚠️ FlowReader SLO Warning"
+        color: "warning"
+
+    - name: "email-sre-team"
+      type: "email"
+      config:
+        to: ["sre-team@company.com"]
+        from: "slo-monitor@company.com"
+        subject: "FlowReader SLO Warning: {{ .CommonAnnotations.summary }}"
+        html: |
+          <h2>SLO Warning Alert</h2>
+          <p><strong>Summary:</strong> {{ .CommonAnnotations.summary }}</p>
+          <p><strong>Description:</strong> {{ .CommonAnnotations.description }}</p>
+          <p><strong>Action Required:</strong> {{ .CommonAnnotations.action_required }}</p>
+          <p><strong>Dashboard:</strong> <a href="{{ .CommonAnnotations.dashboard }}">View Dashboard</a></p>
+          <p><strong>Runbook:</strong> <a href="{{ .CommonAnnotations.runbook }}">View Runbook</a></p>
+
+  # Executive notifications
+  executive_channels:
+    - name: "slack-executive"
+      type: "slack"
+      config:
+        webhook_url: "${SLACK_EXECUTIVE_WEBHOOK}"
+        channel: "#executive-alerts"
+        username: "SLO Executive Monitor"
+        title: "📊 FlowReader SLO Executive Alert"
+
+    - name: "email-executive"
+      type: "email"
+      config:
+        to: ["cto@company.com", "vp-eng@company.com"]
+        from: "slo-monitor@company.com"
+        subject: "FlowReader SLO Executive Alert: {{ .CommonAnnotations.summary }}"
+
+# Routing rules
+routes:
+  - name: "critical-slo-violations"
+    match:
+      severity: "critical"
+      alertname: "~SLOViolation_.*"
+    channels: ["pagerduty-sre", "slack-sre-critical", "phone-oncall"]
+    group_wait: 10s
+    group_interval: 30s
+    repeat_interval: 30m
+
+  - name: "error-budget-critical"
+    match:
+      severity: "critical"
+      alertname: "~ErrorBudget.*Critical.*"
+    channels: ["pagerduty-sre", "slack-sre-critical", "slack-executive"]
+    group_wait: 30s
+    repeat_interval: 1h
+
+  - name: "multiple-violations"
+    match:
+      alertname: "MultipleSLO_Violations"
+    channels: ["pagerduty-sre", "slack-sre-critical", "email-executive"]
+    group_wait: 0s
+    repeat_interval: 15m
+
+  - name: "slo-warnings"
+    match:
+      severity: "warning"
+      alertname: "~SLO.*"
+    channels: ["slack-sre-alerts", "email-sre-team"]
+    group_wait: 60s
+    group_interval: 5m
+    repeat_interval: 2h
+
+  - name: "security-alerts"
+    match:
+      team: "security"
+    channels: ["slack-sre-alerts", "email-sre-team"]
+    additional_channels: ["security-team@company.com"]
+
+  - name: "default"
+    match: {}
+    channels: ["slack-sre-alerts"]
+    group_wait: 2m
+    repeat_interval: 4h
+
+# Inhibition rules (suppress lower priority alerts when higher priority ones are firing)
+inhibition_rules:
+  - source_match:
+      alertname: "SLOViolation_SystemAvailability_Critical"
+    target_match:
+      alertname: "SLOWarning_SystemAvailability"
+    equal: ["service"]
+
+  - source_match:
+      alertname: "MultipleSLO_Violations"
+    target_match_re:
+      alertname: "SLO.*"
+    equal: ["service"]
+
+  - source_match:
+      severity: "critical"
+    target_match:
+      severity: "warning"
+    equal: ["service", "slo"]
+
+# Testing and validation
+testing:
+  enabled: true
+  test_scenarios:
+    - name: "availability_violation"
+      description: "Test availability SLO violation alert"
+      simulate_metric: "slo_availability_percentage"
+      simulate_value: 99.0
+      expected_alerts: ["SLOViolation_SystemAvailability_Critical"]
+
+    - name: "latency_warning"
+      description: "Test P95 latency warning alert"
+      simulate_metric: "p95_latency_milliseconds"
+      simulate_value: 2200
+      expected_alerts: ["SLOWarning_P95Latency"]
+
+    - name: "error_budget_critical"
+      description: "Test error budget critical consumption"
+      simulate_metric: "error_budget_availability_consumed_percentage"
+      simulate_value: 90
+      expected_alerts: ["ErrorBudget_Critical_Availability"]
+
+# Maintenance and suppression
+maintenance:
+  # Suppress alerts during maintenance windows
+  maintenance_windows:
+    - name: "monthly_maintenance"
+      schedule: "0 2 1 * *"  # First Sunday of month at 2 AM
+      duration: "2h"
+      suppress_alerts: ["SLOViolation_SystemAvailability_Critical", "SLOWarning_SystemAvailability"]
+
+    - name: "deployment_window"
+      schedule: "0 14 * * 2,4"  # Tuesday and Thursday at 2 PM
+      duration: "30m"
+      suppress_alerts: ["SLOWarning_.*"]
+
+  # Temporary suppression capability
+  suppression_api:
+    enabled: true
+    endpoint: "/api/alerts/suppress"
+    max_duration: "24h"
+    require_justification: true

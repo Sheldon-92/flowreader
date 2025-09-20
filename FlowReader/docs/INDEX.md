@@ -1,0 +1,26 @@
+# FlowReader 文档索引（MVP）
+
+- 产品愿景与现状
+  - `/PRODUCT_VISION.md`
+  - `/PROJECT_STATUS.md`
+  - `/DELIVERABLE_STATUS.md`
+  - `/phase_1_plan.md`
+  - `FlowReader/docs/DOCS_FREEZE_2025-09-18.md` 〈MVP 文档冻结〉
+- 产品需求文档
+  - `FlowReader/docs/mvp/PRD_MVP.md`
+  - `FlowReader/docs/DECISIONS.md`
+  - `FlowReader/docs/GLOSSARY.md`
+- 功能/技术规格
+  - 统一上下文 AI 动作（翻译/解释/辨析/提问）：`FlowReader/docs/ux/reader_context_actions.md`
+  - 样式与文案规范（上下文 AI 动作）：`FlowReader/docs/ux/reader_context_actions_style.md`
+  - AI 对话接口契约（含 intent/context）：`FlowReader/docs/api/chat_stream.md`
+  - 笔记基础能力规格：`FlowReader/docs/tech/notes_base_spec.md`
+  - RAG 优化与评测计划：`FlowReader/docs/tech/rag_optimization_plan.md`
+- 执行与验证
+  - 测试计划与证据：`FlowReader/docs/qa/test_plan.md`
+  - 部署运行手册：`FlowReader/docs/ops/deploy_runbook.md`
+- ASGO 轨道指令
+  - `FlowReader/docs/tracks/T1-RAG-OPT.md`
+  - `FlowReader/docs/tracks/T2-CONTEXT-ACTIONS.md`
+  - `FlowReader/docs/tracks/T3-NOTES-BASE.md`
+  - `FlowReader/docs/tracks/T4-DEPLOY-PREP.md`

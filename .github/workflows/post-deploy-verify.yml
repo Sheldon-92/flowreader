@@ -1,0 +1,115 @@
+name: Post-Deployment Verification
+
+on:
+  # Run after successful deployments
+  deployment_status:
+
+  # Allow manual runs
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to verify'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - preview
+      base_url:
+        description: 'Base URL to verify (optional - will use deployment URL if available)'
+        required: false
+        type: string
+
+jobs:
+  verify:
+    name: Verify Deployment
+    runs-on: ubuntu-latest
+    if: github.event.deployment_status.state == 'success' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Determine target URL
+        id: target-url
+        run: |
+          if [ -n "${{ github.event.inputs.base_url }}" ]; then
+            echo "url=${{ github.event.inputs.base_url }}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ github.event.deployment_status.target_url }}" ]; then
+            echo "url=${{ github.event.deployment_status.target_url }}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ github.event.deployment_status.environment_url }}" ]; then
+            echo "url=${{ github.event.deployment_status.environment_url }}" >> $GITHUB_OUTPUT
+          else
+            echo "url=https://${{ github.repository_owner }}-flowreader.vercel.app" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run post-deployment verification
+        env:
+          # Base configuration
+          VERIFY_TIMEOUT: ${{ github.event.inputs.environment == 'production' && '15000' || '10000' }}
+          VERIFY_RETRIES: 3
+          OUTPUT_JSON: true
+
+          # Performance thresholds
+          HEALTH_CHECK_MAX_MS: ${{ github.event.inputs.environment == 'production' && '3000' || '2000' }}
+          API_MAX_MS: ${{ github.event.inputs.environment == 'production' && '8000' || '5000' }}
+          STREAMING_MAX_MS: ${{ github.event.inputs.environment == 'production' && '15000' || '10000' }}
+
+          # Test user credentials (optional)
+          # TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          # TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+        run: npm run verify:post-deploy ${{ steps.target-url.outputs.url }}
+
+      - name: Upload verification report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-report-${{ github.event.inputs.environment || 'auto' }}-${{ github.run_number }}
+          path: verification-report.json
+          retention-days: 30
+
+      - name: Comment on PR (if applicable)
+        if: github.event.deployment_status.environment == 'Preview' && github.event.pull_request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const environment = '${{ github.event.deployment_status.environment }}';
+            const targetUrl = '${{ steps.target-url.outputs.url }}';
+            const state = '${{ github.event.deployment_status.state }}';
+
+            let status = '✅ PASSED';
+            if (context.job.conclusion === 'failure') {
+              status = '❌ FAILED';
+            }
+
+            const body = `## 🔍 Post-Deployment Verification ${status}
+
+            **Environment:** ${environment}
+            **URL:** ${targetUrl}
+            **Workflow:** [View Details](${context.payload.repository.html_url}/actions/runs/${context.runId})
+
+            ${status === '❌ FAILED' ? '⚠️ Verification failed. Please check the workflow logs for details.' : '🎉 All verification tests passed!'}`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Fail workflow if verification failed
+        if: failure()
+        run: |
+          echo "❌ Post-deployment verification failed"
+          echo "Check the logs above for detailed error information"
+          exit 1

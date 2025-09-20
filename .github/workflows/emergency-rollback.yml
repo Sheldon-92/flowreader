@@ -1,0 +1,376 @@
+name: Emergency Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      rollback_reason:
+        description: 'Reason for emergency rollback'
+        required: true
+        type: choice
+        options:
+          - 'Critical service failure'
+          - 'Security incident'
+          - 'Performance degradation'
+          - 'Data corruption'
+          - 'Other critical issue'
+      confirmation:
+        description: 'Type ROLLBACK to confirm emergency rollback'
+        required: true
+        type: string
+      target_deployment:
+        description: 'Specific deployment URL to rollback to (optional)'
+        required: false
+        type: string
+      skip_health_checks:
+        description: 'Skip post-rollback health checks (NOT RECOMMENDED)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '18'
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  PROD_URL: 'https://flowreader.vercel.app'
+
+jobs:
+  emergency-rollback:
+    name: Emergency Production Rollback
+    runs-on: ubuntu-latest
+    environment:
+      name: production-emergency
+      url: https://flowreader.vercel.app
+
+    steps:
+      - name: Validate rollback confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirmation }}" != "ROLLBACK" ]; then
+            echo "❌ Rollback confirmation failed. Please type 'ROLLBACK' to confirm."
+            exit 1
+          fi
+          echo "✅ Emergency rollback confirmed"
+          echo "Reason: ${{ github.event.inputs.rollback_reason }}"
+
+      - name: Checkout rollback scripts
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Record pre-rollback state
+        id: pre-rollback
+        run: |
+          echo "Recording current production state before rollback..."
+
+          # Get current deployment
+          current_deployment=$(vercel ls flowreader --token=${{ secrets.VERCEL_TOKEN }} | grep "flowreader" | head -1 | awk '{print $2}' || echo "unknown")
+          echo "current-deployment=$current_deployment" >> $GITHUB_OUTPUT
+          echo "📦 Current deployment: $current_deployment"
+
+          # Check current health status
+          health_status="unknown"
+          if curl -f --max-time 10 "${{ env.PROD_URL }}/api/health" > /dev/null 2>&1; then
+            health_status="healthy"
+          else
+            health_status="unhealthy"
+          fi
+          echo "pre-rollback-health=$health_status" >> $GITHUB_OUTPUT
+          echo "🏥 Pre-rollback health: $health_status"
+
+          # Record response time
+          response_time=$(curl -w "%{time_total}" -s -o /dev/null --max-time 10 "${{ env.PROD_URL }}/api/health" 2>/dev/null || echo "timeout")
+          echo "pre-rollback-response-time=$response_time" >> $GITHUB_OUTPUT
+          echo "⏱️  Pre-rollback response time: ${response_time}s"
+
+      - name: Determine rollback target
+        id: rollback-target
+        run: |
+          if [ -n "${{ github.event.inputs.target_deployment }}" ]; then
+            target_deployment="${{ github.event.inputs.target_deployment }}"
+            echo "Using specified deployment: $target_deployment"
+          else
+            # Get previous deployment (second in list)
+            target_deployment=$(vercel ls flowreader --token=${{ secrets.VERCEL_TOKEN }} | grep "flowreader" | sed -n '2p' | awk '{print $2}' || echo "")
+            if [ -z "$target_deployment" ]; then
+              echo "❌ No previous deployment found for automatic rollback"
+              exit 1
+            fi
+            echo "Using previous deployment: $target_deployment"
+          fi
+
+          echo "target-deployment=$target_deployment" >> $GITHUB_OUTPUT
+          echo "🎯 Rollback target: $target_deployment"
+
+      - name: Verify rollback target health
+        run: |
+          target_deployment="${{ steps.rollback-target.outputs.target-deployment }}"
+          echo "Verifying rollback target health: $target_deployment"
+
+          # Test if the target deployment responds
+          if curl -f --max-time 10 "$target_deployment/api/health" > /dev/null 2>&1; then
+            echo "✅ Rollback target is healthy"
+          else
+            echo "⚠️  WARNING: Rollback target may not be healthy"
+            echo "Proceeding with rollback anyway due to emergency nature"
+          fi
+
+      - name: Execute emergency rollback
+        id: rollback
+        run: |
+          target_deployment="${{ steps.rollback-target.outputs.target-deployment }}"
+          echo "🚨 EXECUTING EMERGENCY ROLLBACK 🚨"
+          echo "FROM: ${{ steps.pre-rollback.outputs.current-deployment }}"
+          echo "TO:   $target_deployment"
+
+          rollback_start=$(date '+%Y-%m-%d %H:%M:%S')
+          echo "rollback-start-time=$rollback_start" >> $GITHUB_OUTPUT
+
+          # Perform the rollback
+          if vercel promote "$target_deployment" --token=${{ secrets.VERCEL_TOKEN }}; then
+            echo "rollback-status=success" >> $GITHUB_OUTPUT
+            echo "✅ Rollback promotion successful"
+          else
+            echo "rollback-status=failed" >> $GITHUB_OUTPUT
+            echo "❌ Rollback promotion failed"
+            exit 1
+          fi
+
+      - name: Wait for rollback propagation
+        run: |
+          echo "⏳ Waiting for rollback to propagate..."
+          sleep 60
+
+      - name: Verify rollback success
+        id: verify-rollback
+        if: ${{ !github.event.inputs.skip_health_checks }}
+        run: |
+          echo "🔍 Verifying rollback success..."
+
+          max_attempts=10
+          attempt=1
+
+          while [ $attempt -le $max_attempts ]; do
+            echo "Verification attempt $attempt/$max_attempts"
+
+            # Health check
+            if curl -f --max-time 10 "${{ env.PROD_URL }}/api/health" > /dev/null 2>&1; then
+              echo "✅ Health check passed"
+
+              # Response time check
+              response_time=$(curl -w "%{time_total}" -s -o /dev/null --max-time 10 "${{ env.PROD_URL }}/api/health" 2>/dev/null || echo "999")
+              echo "⏱️  Response time: ${response_time}s"
+
+              # Protected endpoint check
+              protected_status=$(curl -s -w "%{http_code}" -o /dev/null "${{ env.PROD_URL }}/api/books" 2>/dev/null || echo "000")
+              if [ "$protected_status" = "401" ]; then
+                echo "✅ Security check passed"
+              else
+                echo "⚠️  Security check warning: $protected_status"
+              fi
+
+              echo "verification-status=success" >> $GITHUB_OUTPUT
+              echo "post-rollback-response-time=$response_time" >> $GITHUB_OUTPUT
+              echo "✅ Rollback verification successful!"
+              break
+            else
+              if [ $attempt -eq $max_attempts ]; then
+                echo "❌ Rollback verification failed after $max_attempts attempts"
+                echo "verification-status=failed" >> $GITHUB_OUTPUT
+                exit 1
+              else
+                echo "⏳ Health check failed, retrying in 30s..."
+                sleep 30
+              fi
+            fi
+
+            attempt=$((attempt + 1))
+          done
+
+      - name: Create rollback incident record
+        if: always()
+        run: |
+          rollback_end=$(date '+%Y-%m-%d %H:%M:%S')
+          incident_file="rollback-incident-$(date '+%Y%m%d-%H%M%S').md"
+
+          cat > "$incident_file" << EOF
+          # Emergency Rollback Incident Report
+
+          **Incident Date**: $rollback_end
+          **Triggered By**: ${{ github.actor }}
+          **Reason**: ${{ github.event.inputs.rollback_reason }}
+          **Workflow**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          ## Rollback Details
+
+          - **From Deployment**: ${{ steps.pre-rollback.outputs.current-deployment }}
+          - **To Deployment**: ${{ steps.rollback-target.outputs.target-deployment }}
+          - **Start Time**: ${{ steps.rollback.outputs.rollback-start-time }}
+          - **End Time**: $rollback_end
+          - **Status**: ${{ steps.rollback.outputs.rollback-status }}
+
+          ## Health Status
+
+          - **Pre-Rollback Health**: ${{ steps.pre-rollback.outputs.pre-rollback-health }}
+          - **Pre-Rollback Response Time**: ${{ steps.pre-rollback.outputs.pre-rollback-response-time }}s
+          - **Post-Rollback Verification**: ${{ steps.verify-rollback.outputs.verification-status || 'skipped' }}
+          - **Post-Rollback Response Time**: ${{ steps.verify-rollback.outputs.post-rollback-response-time || 'unknown' }}s
+
+          ## Next Steps
+
+          - [ ] Investigate root cause of: ${{ github.event.inputs.rollback_reason }}
+          - [ ] Test fix in staging environment
+          - [ ] Plan redeployment with comprehensive testing
+          - [ ] Update monitoring and alerting to prevent recurrence
+          - [ ] Conduct post-incident review
+
+          ## Production URLs
+
+          - **Production**: ${{ env.PROD_URL }}
+          - **Health Check**: ${{ env.PROD_URL }}/api/health
+
+          **Incident Status**: $(if [ "${{ steps.rollback.outputs.rollback-status }}" = "success" ]; then echo "Resolved via rollback"; else echo "Failed - Manual intervention required"; fi)
+          EOF
+
+          echo "📄 Incident record created: $incident_file"
+
+          # Upload as artifact
+          echo "incident-file=$incident_file" >> $GITHUB_OUTPUT
+
+      - name: Upload incident record
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rollback-incident-record
+          path: rollback-incident-*.md
+          retention-days: 90
+
+  post-rollback-monitoring:
+    name: Post-Rollback Monitoring
+    runs-on: ubuntu-latest
+    needs: emergency-rollback
+    if: always() && needs.emergency-rollback.outputs.rollback-status == 'success'
+
+    steps:
+      - name: Checkout monitoring scripts
+        uses: actions/checkout@v4
+
+      - name: Extended monitoring period
+        run: |
+          echo "🔍 Starting extended post-rollback monitoring..."
+
+          # Monitor for 10 minutes with health checks every 30 seconds
+          end_time=$(($(date +%s) + 600))  # 10 minutes from now
+          check_count=0
+          failed_checks=0
+
+          while [ $(date +%s) -lt $end_time ]; do
+            check_count=$((check_count + 1))
+
+            if curl -f --max-time 10 "${{ env.PROD_URL }}/api/health" > /dev/null 2>&1; then
+              echo "✅ Check $check_count: Healthy"
+            else
+              failed_checks=$((failed_checks + 1))
+              echo "❌ Check $check_count: Failed"
+
+              # If more than 3 failures in monitoring period, alert
+              if [ $failed_checks -gt 3 ]; then
+                echo "🚨 Multiple health check failures detected during monitoring"
+                echo "This may indicate the rollback was not fully successful"
+                exit 1
+              fi
+            fi
+
+            sleep 30
+          done
+
+          echo "📊 Monitoring complete: $check_count checks, $failed_checks failures"
+
+          if [ $failed_checks -eq 0 ]; then
+            echo "✅ Post-rollback monitoring: All checks passed"
+          elif [ $failed_checks -le 2 ]; then
+            echo "⚠️  Post-rollback monitoring: Some intermittent failures"
+          else
+            echo "❌ Post-rollback monitoring: Concerning failure rate"
+            exit 1
+          fi
+
+  notification:
+    name: Rollback Notifications
+    runs-on: ubuntu-latest
+    needs: [emergency-rollback, post-rollback-monitoring]
+    if: always()
+
+    steps:
+      - name: Determine overall status
+        id: status
+        run: |
+          rollback_status="${{ needs.emergency-rollback.outputs.rollback-status }}"
+          monitoring_result="${{ needs.post-rollback-monitoring.result }}"
+
+          if [ "$rollback_status" = "success" ] && [ "$monitoring_result" = "success" ]; then
+            echo "status=✅ SUCCESS" >> $GITHUB_OUTPUT
+            echo "message=Emergency rollback completed successfully with stable monitoring" >> $GITHUB_OUTPUT
+            echo "color=success" >> $GITHUB_OUTPUT
+          elif [ "$rollback_status" = "success" ]; then
+            echo "status=⚠️ PARTIAL SUCCESS" >> $GITHUB_OUTPUT
+            echo "message=Emergency rollback completed but monitoring detected issues" >> $GITHUB_OUTPUT
+            echo "color=warning" >> $GITHUB_OUTPUT
+          else
+            echo "status=❌ FAILED" >> $GITHUB_OUTPUT
+            echo "message=Emergency rollback failed - immediate manual intervention required" >> $GITHUB_OUTPUT
+            echo "color=failure" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create emergency summary
+        run: |
+          echo "## 🚨 Emergency Rollback Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ steps.status.outputs.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Reason:** ${{ github.event.inputs.rollback_reason }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Rollback Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target:** ${{ needs.emergency-rollback.outputs.target-deployment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Execution:** ${{ needs.emergency-rollback.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Monitoring:** ${{ needs.post-rollback-monitoring.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Production Status" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL:** ${{ env.PROD_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Health Endpoint:** ${{ env.PROD_URL }}/api/health" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.status.outputs.status }}" = "✅ SUCCESS" ]; then
+            echo "### ✅ Next Steps" >> $GITHUB_STEP_SUMMARY
+            echo "1. 🔍 **Investigate** the root cause of: ${{ github.event.inputs.rollback_reason }}" >> $GITHUB_STEP_SUMMARY
+            echo "2. 🧪 **Test fix** in staging environment" >> $GITHUB_STEP_SUMMARY
+            echo "3. 📋 **Plan redeployment** with enhanced testing" >> $GITHUB_STEP_SUMMARY
+            echo "4. 📊 **Review monitoring** and alerting" >> $GITHUB_STEP_SUMMARY
+            echo "5. 📝 **Conduct post-incident review** within 24 hours" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### 🚨 Immediate Actions Required" >> $GITHUB_STEP_SUMMARY
+            echo "1. 🔧 **Manual intervention** required immediately" >> $GITHUB_STEP_SUMMARY
+            echo "2. 📞 **Escalate** to senior DevOps/SRE team" >> $GITHUB_STEP_SUMMARY
+            echo "3. 🔍 **Check Vercel dashboard** for deployment status" >> $GITHUB_STEP_SUMMARY
+            echo "4. 🚦 **Consider maintenance mode** if service is degraded" >> $GITHUB_STEP_SUMMARY
+            echo "5. 📋 **Document all manual actions** taken" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      # TODO: Add actual notification integrations here
+      # - Slack webhook
+      # - PagerDuty incident
+      # - Email notifications
+      # - GitHub issue creation
+
+      - name: Log notification (placeholder)
+        run: |
+          echo "🔔 NOTIFICATION: ${{ steps.status.outputs.message }}"
+          echo "This is where actual notifications would be sent:"
+          echo "  - Slack: Emergency rollback alert"
+          echo "  - PagerDuty: Incident update"
+          echo "  - Email: Stakeholder notification"

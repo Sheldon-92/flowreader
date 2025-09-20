@@ -1,0 +1,28 @@
+import { createSupabaseServerClient } from '@supabase/auth-helpers-sveltekit';
+import { redirect } from '@sveltejs/kit';
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+import type { PageServerLoad } from './$types';
+
+export const load: PageServerLoad = async ({ event, depends }) => {
+  depends('supabase:auth');
+
+  const supabase = createSupabaseServerClient({
+    supabaseUrl: PUBLIC_SUPABASE_URL,
+    supabaseKey: PUBLIC_SUPABASE_ANON_KEY,
+    event
+  });
+
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+
+  // Redirect to library if already authenticated
+  if (session) {
+    throw redirect(303, '/library');
+  }
+
+  return {
+    supabase,
+    session
+  };
+};

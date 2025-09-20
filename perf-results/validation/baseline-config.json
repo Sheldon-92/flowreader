@@ -1,0 +1,14 @@
+{
+  "tokenManagement": {
+    "enabled": false
+  },
+  "caching": {
+    "enabled": false
+  },
+  "promptOptimization": {
+    "enabled": false
+  },
+  "modelOptimization": {
+    "enabled": false
+  }
+}

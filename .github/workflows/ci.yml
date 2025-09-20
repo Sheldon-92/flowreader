@@ -1,0 +1,189 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '18'
+  SKIP_ENV_VALIDATION: '1'
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type checking
+        run: npm run type-check
+
+      - name: Lint code
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Verify build artifacts
+        run: |
+          echo "Checking build outputs..."
+          if [ -d "apps/web/build" ]; then
+            echo "✅ Web app build found"
+            ls -la apps/web/build/
+          else
+            echo "❌ Web app build not found"
+            exit 1
+          fi
+
+          if [ -d ".vercel/output" ]; then
+            echo "✅ Vercel output found"
+            ls -la .vercel/output/
+          else
+            echo "⚠️  Vercel output not found (may be expected for PR builds)"
+          fi
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: |
+          npm audit --audit-level=moderate
+
+      - name: Check for vulnerable dependencies
+        run: |
+          if npm audit --audit-level=high --parseable | grep -q ""; then
+            echo "❌ High severity vulnerabilities found"
+            npm audit --audit-level=high
+            exit 1
+          else
+            echo "✅ No high severity vulnerabilities found"
+          fi
+
+  api-validation:
+    name: API Validation
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate API endpoints structure
+        run: |
+          echo "Validating API endpoint structure..."
+
+          # Check required API files exist
+          required_endpoints=(
+            "api/health.ts"
+            "api/auth/login.ts"
+            "api/auth/register.ts"
+            "api/books/upload.ts"
+            "api/books/[id].ts"
+          )
+
+          for endpoint in "${required_endpoints[@]}"; do
+            if [ -f "$endpoint" ]; then
+              echo "✅ $endpoint found"
+            else
+              echo "❌ $endpoint missing"
+              exit 1
+            fi
+          done
+
+      - name: Validate environment configuration
+        run: |
+          echo "Validating environment configuration..."
+
+          # Check .env.example exists and has required variables
+          if [ ! -f ".env.example" ]; then
+            echo "❌ .env.example not found"
+            exit 1
+          fi
+
+          required_vars=(
+            "PUBLIC_SUPABASE_URL"
+            "PUBLIC_SUPABASE_ANON_KEY"
+            "SUPABASE_SERVICE_ROLE_KEY"
+            "OPENAI_API_KEY"
+            "JWT_SECRET"
+          )
+
+          for var in "${required_vars[@]}"; do
+            if grep -q "^$var=" .env.example; then
+              echo "✅ $var found in .env.example"
+            else
+              echo "❌ $var missing from .env.example"
+              exit 1
+            fi
+          done
+
+  build-status:
+    name: Build Status
+    runs-on: ubuntu-latest
+    needs: [build-and-test, security-scan, api-validation]
+    if: always()
+
+    steps:
+      - name: Check build results
+        run: |
+          if [ "${{ needs.build-and-test.result }}" == "success" ] && \
+             [ "${{ needs.security-scan.result }}" == "success" ] && \
+             [ "${{ needs.api-validation.result }}" == "success" ]; then
+            echo "✅ All CI checks passed successfully"
+            echo "🚀 Ready for deployment to staging"
+          else
+            echo "❌ CI checks failed:"
+            echo "  Build and Test: ${{ needs.build-and-test.result }}"
+            echo "  Security Scan: ${{ needs.security-scan.result }}"
+            echo "  API Validation: ${{ needs.api-validation.result }}"
+            exit 1
+          fi

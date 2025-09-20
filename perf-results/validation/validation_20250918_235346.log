@@ -1,0 +1,10 @@
+[0;34m[23:53:46][0m Validation Configuration:
+[0;34m[23:53:46][0m   Token Reduction Target: ≥10%
+[0;34m[23:53:46][0m   P95 Latency Reduction Target: ≥15%
+[0;34m[23:53:46][0m   Quality Maintenance Target: ≥63.2%
+[0;34m[23:53:46][0m   Samples: 20
+[0;34m[23:53:46][0m   Statistical Testing: false
+[0;34m[23:53:46][0m Validating environment for performance target validation...
+[0;32m[SUCCESS][0m Environment validation completed
+[0;34m[23:53:46][0m Running baseline measurement (optimizations disabled)...
+[0;31m[ERROR][0m Baseline measurement failed

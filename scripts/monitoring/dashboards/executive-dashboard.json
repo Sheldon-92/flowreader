@@ -1,0 +1,576 @@
+{
+  "dashboard_config": {
+    "name": "FlowReader Executive SLO Dashboard",
+    "version": "1.0",
+    "type": "executive_summary",
+    "refresh_interval": 300,
+    "data_retention_days": 365,
+    "created": "2024-09-19",
+    "description": "Executive-level view of FlowReader SLO performance and business impact",
+    "audience": "executive",
+    "tags": ["executive", "business-impact", "slo-summary", "kpi"]
+  },
+  "data_sources": {
+    "slo_summary": {
+      "type": "aggregated",
+      "source": "slo_data",
+      "aggregation": "executive_summary",
+      "update_frequency": 300
+    },
+    "business_impact": {
+      "type": "calculated",
+      "source": ["slo_data", "usage_metrics"],
+      "calculation": "business_impact_analysis",
+      "update_frequency": 3600
+    },
+    "cost_analysis": {
+      "type": "json",
+      "path": "/tmp/flowreader-monitoring/cost-analysis/*.json",
+      "format": "cost_metrics",
+      "update_frequency": 3600
+    }
+  },
+  "kpi_definitions": {
+    "service_availability": {
+      "name": "Service Availability",
+      "target": 99.5,
+      "unit": "%",
+      "business_impact": "high",
+      "description": "Overall system uptime and accessibility"
+    },
+    "user_experience_score": {
+      "name": "User Experience Score",
+      "target": 95.0,
+      "unit": "/100",
+      "business_impact": "critical",
+      "description": "Composite score of latency, quality, and success rate"
+    },
+    "reliability_score": {
+      "name": "Reliability Score",
+      "target": 98.0,
+      "unit": "/100",
+      "business_impact": "high",
+      "description": "System reliability based on error rates and incidents"
+    },
+    "cost_efficiency": {
+      "name": "Cost Efficiency",
+      "target": 95.0,
+      "unit": "%",
+      "business_impact": "medium",
+      "description": "Cost optimization while maintaining SLO targets"
+    }
+  },
+  "panels": [
+    {
+      "id": "executive_summary_cards",
+      "title": "Service Health Summary",
+      "type": "summary_cards",
+      "position": {"x": 0, "y": 0, "width": 12, "height": 4},
+      "layout": "four_column",
+      "cards": [
+        {
+          "title": "Service Availability",
+          "value_query": "slo_summary.availability.current",
+          "target": 99.5,
+          "unit": "%",
+          "trend_query": "slo_summary.availability.trend_7d",
+          "impact_level": "critical",
+          "display": {
+            "format": "percentage",
+            "decimals": 2,
+            "show_trend_arrow": true,
+            "show_target_comparison": true,
+            "color_by_performance": true
+          }
+        },
+        {
+          "title": "User Experience",
+          "value_query": "calculated.user_experience_score",
+          "target": 95.0,
+          "unit": "/100",
+          "trend_query": "calculated.user_experience_trend_7d",
+          "impact_level": "critical",
+          "display": {
+            "format": "score",
+            "decimals": 1,
+            "show_trend_arrow": true,
+            "show_target_comparison": true,
+            "color_by_performance": true
+          }
+        },
+        {
+          "title": "System Reliability",
+          "value_query": "calculated.reliability_score",
+          "target": 98.0,
+          "unit": "/100",
+          "trend_query": "calculated.reliability_trend_7d",
+          "impact_level": "high",
+          "display": {
+            "format": "score",
+            "decimals": 1,
+            "show_trend_arrow": true,
+            "show_target_comparison": true,
+            "color_by_performance": true
+          }
+        },
+        {
+          "title": "Monthly Cost Impact",
+          "value_query": "cost_analysis.monthly_cost_impact",
+          "target": 0,
+          "unit": "$",
+          "trend_query": "cost_analysis.cost_trend_30d",
+          "impact_level": "medium",
+          "display": {
+            "format": "currency",
+            "decimals": 0,
+            "show_trend_arrow": true,
+            "show_budget_comparison": true,
+            "color_by_budget": true
+          }
+        }
+      ],
+      "styling": {
+        "card_border": true,
+        "shadow": true,
+        "background_gradient": false
+      }
+    },
+    {
+      "id": "slo_compliance_gauge",
+      "title": "SLO Compliance Score",
+      "type": "radial_gauge",
+      "position": {"x": 0, "y": 4, "width": 4, "height": 5},
+      "metric": {
+        "name": "Overall SLO Compliance",
+        "query": "calculated.overall_slo_compliance",
+        "calculation": "weighted_average",
+        "weights": {
+          "availability": 0.4,
+          "latency": 0.3,
+          "error_rate": 0.2,
+          "quality": 0.1
+        }
+      },
+      "display": {
+        "min": 0,
+        "max": 100,
+        "unit": "%",
+        "decimals": 1,
+        "thresholds": {
+          "excellent": 98,
+          "good": 95,
+          "warning": 90,
+          "critical": 85
+        },
+        "colors": {
+          "excellent": "#28A745",
+          "good": "#20C997",
+          "warning": "#FFC107",
+          "critical": "#DC3545"
+        },
+        "show_target_arc": true,
+        "show_trend_indicator": true
+      }
+    },
+    {
+      "id": "error_budget_overview",
+      "title": "Error Budget Status",
+      "type": "budget_overview",
+      "position": {"x": 4, "y": 4, "width": 4, "height": 5},
+      "budgets": [
+        {
+          "name": "Availability",
+          "consumed_query": "error_budget.availability.consumed_percent",
+          "remaining_query": "error_budget.availability.remaining_percent",
+          "burn_rate_query": "error_budget.availability.burn_rate_7d",
+          "thresholds": {
+            "healthy": 50,
+            "warning": 75,
+            "critical": 90
+          }
+        },
+        {
+          "name": "Performance",
+          "consumed_query": "error_budget.latency.consumed_percent",
+          "remaining_query": "error_budget.latency.remaining_percent",
+          "burn_rate_query": "error_budget.latency.burn_rate_7d",
+          "thresholds": {
+            "healthy": 60,
+            "warning": 80,
+            "critical": 95
+          }
+        },
+        {
+          "name": "Quality",
+          "consumed_query": "error_budget.quality.consumed_percent",
+          "remaining_query": "error_budget.quality.remaining_percent",
+          "burn_rate_query": "error_budget.quality.burn_rate_7d",
+          "thresholds": {
+            "healthy": 40,
+            "warning": 70,
+            "critical": 85
+          }
+        }
+      ],
+      "display": {
+        "layout": "horizontal_bars",
+        "show_percentages": true,
+        "show_burn_rates": true,
+        "show_projected_depletion": true
+      }
+    },
+    {
+      "id": "incident_impact_summary",
+      "title": "Incident Impact & Recovery",
+      "type": "incident_summary",
+      "position": {"x": 8, "y": 4, "width": 4, "height": 5},
+      "time_range": "30d",
+      "metrics": [
+        {
+          "name": "MTTR",
+          "query": "incidents.mean_time_to_resolution_minutes",
+          "target": 30,
+          "unit": "min",
+          "display": {
+            "format": "duration",
+            "color": "#17A2B8"
+          }
+        },
+        {
+          "name": "MTBF",
+          "query": "incidents.mean_time_between_failures_hours",
+          "target": 720,
+          "unit": "hrs",
+          "display": {
+            "format": "duration",
+            "color": "#28A745"
+          }
+        },
+        {
+          "name": "Incidents",
+          "query": "incidents.total_count_30d",
+          "target": 5,
+          "unit": "",
+          "display": {
+            "format": "number",
+            "color": "#DC3545"
+          }
+        },
+        {
+          "name": "User Impact",
+          "query": "incidents.affected_users_percent",
+          "target": 5.0,
+          "unit": "%",
+          "display": {
+            "format": "percentage",
+            "color": "#FFC107"
+          }
+        }
+      ],
+      "display": {
+        "layout": "stat_grid",
+        "show_trends": true,
+        "show_targets": true
+      }
+    },
+    {
+      "id": "business_impact_timeline",
+      "title": "Business Impact Timeline",
+      "type": "timeline_chart",
+      "position": {"x": 0, "y": 9, "width": 8, "height": 4},
+      "time_range": "30d",
+      "events": [
+        {
+          "name": "SLO Violations",
+          "query": "slo_violations[]",
+          "color": "#DC3545",
+          "impact_calculation": "user_minutes_affected"
+        },
+        {
+          "name": "Performance Degradations",
+          "query": "performance_degradations[]",
+          "color": "#FFC107",
+          "impact_calculation": "latency_impact_score"
+        },
+        {
+          "name": "Service Outages",
+          "query": "service_outages[]",
+          "color": "#6F42C1",
+          "impact_calculation": "revenue_impact_estimated"
+        },
+        {
+          "name": "Deployments",
+          "query": "deployments[]",
+          "color": "#20C997",
+          "impact_calculation": "none"
+        }
+      ],
+      "display": {
+        "show_impact_bars": true,
+        "show_event_details": true,
+        "group_by_severity": true,
+        "interactive_tooltips": true
+      }
+    },
+    {
+      "id": "cost_impact_analysis",
+      "title": "Cost Impact Analysis",
+      "type": "cost_analysis_panel",
+      "position": {"x": 8, "y": 9, "width": 4, "height": 4},
+      "time_range": "30d",
+      "metrics": [
+        {
+          "name": "SLO Violation Cost",
+          "query": "cost_analysis.slo_violation_cost_30d",
+          "display": {
+            "format": "currency",
+            "color": "#DC3545"
+          }
+        },
+        {
+          "name": "Performance Optimization Savings",
+          "query": "cost_analysis.optimization_savings_30d",
+          "display": {
+            "format": "currency",
+            "color": "#28A745"
+          }
+        },
+        {
+          "name": "Infrastructure Cost",
+          "query": "cost_analysis.infrastructure_cost_30d",
+          "display": {
+            "format": "currency",
+            "color": "#6C757D"
+          }
+        },
+        {
+          "name": "ROI on Reliability Investment",
+          "query": "cost_analysis.reliability_roi_percent",
+          "display": {
+            "format": "percentage",
+            "color": "#17A2B8"
+          }
+        }
+      ],
+      "display": {
+        "chart_type": "donut",
+        "show_totals": true,
+        "show_trends": true
+      }
+    },
+    {
+      "id": "slo_trends_executive",
+      "title": "SLO Performance Trends",
+      "type": "executive_trends",
+      "position": {"x": 0, "y": 13, "width": 12, "height": 4},
+      "time_range": "90d",
+      "metrics": [
+        {
+          "name": "Service Availability",
+          "query": "slo_trends.availability_daily",
+          "target": 99.5,
+          "color": "#28A745",
+          "weight": 0.4
+        },
+        {
+          "name": "Performance Score",
+          "query": "slo_trends.performance_score_daily",
+          "target": 95.0,
+          "color": "#17A2B8",
+          "weight": 0.3
+        },
+        {
+          "name": "Quality Score",
+          "query": "slo_trends.quality_score_daily",
+          "target": 90.0,
+          "color": "#6F42C1",
+          "weight": 0.2
+        },
+        {
+          "name": "Reliability Index",
+          "query": "slo_trends.reliability_index_daily",
+          "target": 98.0,
+          "color": "#FD7E14",
+          "weight": 0.1
+        }
+      ],
+      "display": {
+        "chart_type": "area_chart",
+        "show_target_lines": true,
+        "show_incidents": true,
+        "show_deployments": true,
+        "smoothing": true,
+        "fill_opacity": 0.2
+      },
+      "annotations": {
+        "incidents": true,
+        "deployments": true,
+        "slo_violations": true
+      }
+    },
+    {
+      "id": "key_insights_panel",
+      "title": "Key Insights & Recommendations",
+      "type": "insights_panel",
+      "position": {"x": 0, "y": 17, "width": 12, "height": 3},
+      "insights": [
+        {
+          "type": "slo_performance",
+          "query": "insights.slo_performance_analysis",
+          "display": {
+            "icon": "chart-line",
+            "color": "#17A2B8"
+          }
+        },
+        {
+          "type": "cost_optimization",
+          "query": "insights.cost_optimization_opportunities",
+          "display": {
+            "icon": "dollar-sign",
+            "color": "#28A745"
+          }
+        },
+        {
+          "type": "risk_assessment",
+          "query": "insights.risk_assessment",
+          "display": {
+            "icon": "exclamation-triangle",
+            "color": "#DC3545"
+          }
+        },
+        {
+          "type": "improvement_opportunities",
+          "query": "insights.improvement_recommendations",
+          "display": {
+            "icon": "lightbulb",
+            "color": "#FFC107"
+          }
+        }
+      ],
+      "display": {
+        "layout": "card_grid",
+        "max_insights": 8,
+        "show_impact_score": true,
+        "show_effort_estimate": true,
+        "prioritize_by": "business_impact"
+      }
+    }
+  ],
+  "calculations": {
+    "user_experience_score": {
+      "formula": "(latency_score * 0.4 + quality_score * 0.4 + availability_score * 0.2)",
+      "components": {
+        "latency_score": "100 - min(100, (p95_latency - 1000) / 15)",
+        "quality_score": "dialog_success_rate",
+        "availability_score": "availability"
+      }
+    },
+    "reliability_score": {
+      "formula": "(availability * 0.5 + error_rate_score * 0.3 + incident_score * 0.2)",
+      "components": {
+        "error_rate_score": "100 - (error_rate * 20)",
+        "incident_score": "max(0, 100 - (incident_count_7d * 10))"
+      }
+    },
+    "business_impact_cost": {
+      "formula": "slo_violation_minutes * estimated_revenue_per_minute",
+      "components": {
+        "slo_violation_minutes": "sum(downtime_minutes + degraded_performance_minutes)",
+        "estimated_revenue_per_minute": "monthly_revenue / (30 * 24 * 60)"
+      }
+    }
+  },
+  "alerts": {
+    "executive_alerts": [
+      {
+        "name": "SLO Compliance Below Target",
+        "condition": "overall_slo_compliance < 95",
+        "severity": "high",
+        "notification_channels": ["executive-email"],
+        "message": "Overall SLO compliance has fallen below 95%: {{value}}%"
+      },
+      {
+        "name": "Critical Business Impact",
+        "condition": "business_impact_score > 80",
+        "severity": "critical",
+        "notification_channels": ["executive-email", "executive-sms"],
+        "message": "High business impact detected from service issues"
+      },
+      {
+        "name": "Error Budget Depletion Risk",
+        "condition": "any(error_budget.*.consumed_percent > 85)",
+        "severity": "warning",
+        "notification_channels": ["executive-email"],
+        "message": "Error budget depletion risk detected - deployment freeze may be required"
+      }
+    ]
+  },
+  "reporting": {
+    "executive_reports": [
+      {
+        "name": "Weekly Executive SLO Summary",
+        "schedule": "0 8 * * 1",
+        "format": "pdf",
+        "recipients": ["ceo@company.com", "cto@company.com", "vp-eng@company.com"],
+        "content": [
+          "executive_summary_cards",
+          "slo_compliance_gauge",
+          "business_impact_timeline",
+          "key_insights_panel"
+        ]
+      },
+      {
+        "name": "Monthly Business Impact Report",
+        "schedule": "0 9 1 * *",
+        "format": "pdf",
+        "recipients": ["leadership-team@company.com"],
+        "content": [
+          "all_panels"
+        ]
+      },
+      {
+        "name": "Quarterly SLO Review",
+        "schedule": "0 10 1 1,4,7,10 *",
+        "format": "comprehensive_pdf",
+        "recipients": ["board@company.com"],
+        "content": [
+          "quarterly_trends",
+          "business_impact_analysis",
+          "cost_benefit_analysis",
+          "strategic_recommendations"
+        ]
+      }
+    ]
+  },
+  "export_options": {
+    "executive_summary": {
+      "format": "executive_pdf",
+      "template": "executive_template.html",
+      "include_explanations": true,
+      "include_recommendations": true,
+      "branding": true
+    }
+  },
+  "access_control": {
+    "viewer_role": {
+      "permissions": ["view_dashboard"],
+      "panels": ["all"]
+    },
+    "executive_role": {
+      "permissions": ["view_dashboard", "export_reports", "configure_alerts"],
+      "panels": ["all"]
+    }
+  },
+  "mobile_optimization": {
+    "enabled": true,
+    "responsive_breakpoints": {
+      "mobile": 768,
+      "tablet": 1024
+    },
+    "mobile_panels": [
+      "executive_summary_cards",
+      "slo_compliance_gauge",
+      "error_budget_overview"
+    ]
+  }
+}

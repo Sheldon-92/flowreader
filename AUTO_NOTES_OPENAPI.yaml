@@ -1,0 +1,431 @@
+openapi: 3.0.3
+info:
+  title: FlowReader Auto Notes API
+  description: |
+    Intelligent automatic note generation API that integrates with FlowReader's T5 Knowledge Enhancement
+    and T7 Dialog History systems to provide context-aware note creation.
+  version: 1.0.0
+  contact:
+    name: FlowReader API Team
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.flowreader.com
+    description: Production server
+  - url: https://staging-api.flowreader.com
+    description: Staging server
+
+security:
+  - bearerAuth: []
+
+paths:
+  /api/notes/auto:
+    post:
+      summary: Generate automatic note
+      description: |
+        Creates an intelligent note based on text selection, reading context, or dialog history.
+        Integrates with T5 Knowledge Enhancement for structured analysis and T7 Dialog History for context.
+      operationId: generateAutoNote
+      tags:
+        - Auto Notes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutoNoteRequest'
+            examples:
+              enhance_selection:
+                summary: Enhance text selection
+                value:
+                  bookId: "123e4567-e89b-12d3-a456-426614174000"
+                  selection:
+                    text: "The concept of quantum entanglement"
+                    start: 1250
+                    end: 1285
+                    chapterId: "456e7890-e89b-12d3-a456-426614174000"
+                  intent: "enhance"
+              dialog_summary:
+                summary: Summarize recent dialog
+                value:
+                  bookId: "123e4567-e89b-12d3-a456-426614174000"
+                  contextScope: "recent_dialog"
+                  options:
+                    includeMetrics: true
+                    maxLength: 1500
+              explain_chapter:
+                summary: Explain chapter content
+                value:
+                  bookId: "123e4567-e89b-12d3-a456-426614174000"
+                  contextScope: "chapter"
+                  intent: "explain"
+      responses:
+        '201':
+          description: Auto note generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutoNoteResponse'
+              example:
+                id: "789e0123-e89b-12d3-a456-426614174000"
+                userId: "abc12345-e89b-12d3-a456-426614174000"
+                bookId: "123e4567-e89b-12d3-a456-426614174000"
+                chapterId: "456e7890-e89b-12d3-a456-426614174000"
+                selection:
+                  text: "The concept of quantum entanglement"
+                  start: 1250
+                  end: 1285
+                  chapterId: "456e7890-e89b-12d3-a456-426614174000"
+                content: "**Quantum Entanglement** refers to a quantum mechanical phenomenon where particles become interconnected and the quantum state of each particle cannot be described independently..."
+                source: "auto"
+                meta:
+                  intent: "enhance"
+                  generationMethod: "knowledge_enhancement"
+                  confidence: 0.87
+                  sourceSelection:
+                    text: "The concept of quantum entanglement"
+                    start: 1250
+                    end: 1285
+                  contextScope: "selection"
+                metrics:
+                  tokens: 456
+                  cost: 0.0234
+                  processingTime: 3420
+                createdAt: "2024-01-01T12:34:56.789Z"
+        '400':
+          description: Bad Request - Invalid input parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_book_id:
+                  summary: Missing bookId
+                  value:
+                    error:
+                      code: "VALIDATION_ERROR"
+                      message: "Request validation failed"
+                      details:
+                        errors:
+                          - field: "bookId"
+                            message: "bookId is required"
+                invalid_selection_length:
+                  summary: Selection text too long
+                  value:
+                    error:
+                      code: "VALIDATION_ERROR"
+                      message: "Request validation failed"
+                      details:
+                        errors:
+                          - field: "selection.text"
+                            message: "Selection text must be 1000 characters or less"
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: "UNAUTHORIZED"
+                  message: "Authentication required"
+        '403':
+          description: Forbidden - Access denied to book
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: "FORBIDDEN"
+                  message: "Access denied to this book"
+                  details:
+                    bookId: "123e4567-e89b-12d3-a456-426614174000"
+                    reason: "not_owner"
+        '422':
+          description: Unprocessable Entity - Invalid parameter combination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: "UNPROCESSABLE_ENTITY"
+                  message: "Invalid parameter combination"
+                  details:
+                    reason: "selection_required_for_intent"
+                    intent: "enhance"
+        '429':
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: "RATE_LIMITED"
+                  message: "Auto note generation rate limit exceeded"
+                  details:
+                    limit: 20
+                    window: "1 hour"
+                    reset_time: "2024-01-01T15:00:00Z"
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: "INTERNAL_ERROR"
+                  message: "Auto note generation failed"
+                  details:
+                    retry_after: 30
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from authentication endpoint
+
+  schemas:
+    AutoNoteRequest:
+      type: object
+      required:
+        - bookId
+      properties:
+        bookId:
+          type: string
+          format: uuid
+          description: UUID of the book for which to generate the note
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        selection:
+          $ref: '#/components/schemas/TextSelection'
+        intent:
+          $ref: '#/components/schemas/IntentType'
+        contextScope:
+          $ref: '#/components/schemas/ContextScope'
+        options:
+          $ref: '#/components/schemas/AutoNoteOptions'
+
+    AutoNoteOptions:
+      type: object
+      properties:
+        maxLength:
+          type: integer
+          minimum: 50
+          maximum: 4000
+          default: 2000
+          description: Maximum length of generated note content
+          example: 1500
+        includeMetrics:
+          type: boolean
+          default: false
+          description: Whether to include generation metrics in response
+          example: true
+
+    TextSelection:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          maxLength: 1000
+          description: Selected text content
+          example: "The concept of quantum entanglement"
+        start:
+          type: integer
+          minimum: 0
+          description: Start position of selection
+          example: 1250
+        end:
+          type: integer
+          minimum: 0
+          description: End position of selection
+          example: 1285
+        chapterId:
+          type: string
+          format: uuid
+          description: Chapter identifier where selection is located
+          example: "456e7890-e89b-12d3-a456-426614174000"
+
+    IntentType:
+      type: string
+      enum:
+        - translate
+        - explain
+        - analyze
+        - ask
+        - enhance
+      description: |
+        Intent for note generation:
+        - translate: Create translation notes
+        - explain: Generate explanatory content
+        - analyze: Provide analytical insights
+        - ask: Generate Q&A style content
+        - enhance: Use T5 Knowledge Enhancer for structured analysis
+      example: "enhance"
+
+    ContextScope:
+      type: string
+      enum:
+        - selection
+        - recent_dialog
+        - chapter
+      default: selection
+      description: |
+        Context scope for generation:
+        - selection: Based on provided text selection
+        - recent_dialog: Summarize recent T7 dialog history
+        - chapter: Generate chapter-based contextual summary
+      example: "selection"
+
+    GenerationMethod:
+      type: string
+      enum:
+        - knowledge_enhancement
+        - dialog_summary
+        - context_analysis
+      description: |
+        Method used for note generation:
+        - knowledge_enhancement: T5 Knowledge Enhancer integration
+        - dialog_summary: T7 Dialog History summarization
+        - context_analysis: General context-based analysis
+      example: "knowledge_enhancement"
+
+    AutoNoteResponse:
+      type: object
+      required:
+        - id
+        - userId
+        - bookId
+        - content
+        - source
+        - meta
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Generated note UUID
+          example: "789e0123-e89b-12d3-a456-426614174000"
+        userId:
+          type: string
+          format: uuid
+          description: User UUID
+          example: "abc12345-e89b-12d3-a456-426614174000"
+        bookId:
+          type: string
+          format: uuid
+          description: Book UUID
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        chapterId:
+          type: string
+          format: uuid
+          description: Chapter UUID (if applicable)
+          example: "456e7890-e89b-12d3-a456-426614174000"
+        selection:
+          $ref: '#/components/schemas/TextSelection'
+        content:
+          type: string
+          minLength: 50
+          maxLength: 4000
+          description: Generated note content
+          example: "**Quantum Entanglement** refers to a quantum mechanical phenomenon where particles become interconnected..."
+        source:
+          type: string
+          enum:
+            - auto
+          description: Always 'auto' for this endpoint
+          example: "auto"
+        meta:
+          $ref: '#/components/schemas/AutoNoteMeta'
+        metrics:
+          $ref: '#/components/schemas/NoteMetrics'
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO timestamp of note creation
+          example: "2024-01-01T12:34:56.789Z"
+
+    AutoNoteMeta:
+      type: object
+      required:
+        - generationMethod
+        - confidence
+      properties:
+        intent:
+          $ref: '#/components/schemas/IntentType'
+        generationMethod:
+          $ref: '#/components/schemas/GenerationMethod'
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Quality confidence score (0-1)
+          example: 0.87
+        sourceSelection:
+          $ref: '#/components/schemas/TextSelection'
+        contextScope:
+          type: string
+          description: Context scope used for generation
+          example: "selection"
+
+    NoteMetrics:
+      type: object
+      required:
+        - tokens
+        - cost
+        - processingTime
+      properties:
+        tokens:
+          type: integer
+          minimum: 0
+          description: Total tokens consumed during generation
+          example: 456
+        cost:
+          type: number
+          minimum: 0
+          description: Estimated cost in USD
+          example: 0.0234
+        processingTime:
+          type: integer
+          minimum: 0
+          description: Processing time in milliseconds
+          example: 3420
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Error code identifier
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              description: Human-readable error message
+              example: "Request validation failed"
+            details:
+              type: object
+              description: Additional error details
+              additionalProperties: true
+              example:
+                errors:
+                  - field: "bookId"
+                    message: "bookId is required"
+
+tags:
+  - name: Auto Notes
+    description: Intelligent automatic note generation API

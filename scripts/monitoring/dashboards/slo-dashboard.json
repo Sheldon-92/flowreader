@@ -1,0 +1,807 @@
+{
+  "dashboard_config": {
+    "name": "FlowReader SLO Compliance Dashboard",
+    "version": "1.0",
+    "type": "slo_focused",
+    "refresh_interval": 60,
+    "data_retention_days": 90,
+    "created": "2024-09-19",
+    "description": "Service Level Objectives (SLO) monitoring dashboard for FlowReader production environment",
+    "tags": ["slo", "sli", "error-budget", "compliance"]
+  },
+  "data_sources": {
+    "slo_data": {
+      "type": "json",
+      "path": "/tmp/flowreader-monitoring/slo-data/*.json",
+      "format": "slo_metrics",
+      "update_frequency": 300
+    },
+    "error_budget_data": {
+      "type": "calculated",
+      "source": "slo_data",
+      "calculation": "error_budget_consumption",
+      "update_frequency": 60
+    },
+    "slo_reports": {
+      "type": "json",
+      "path": "/tmp/flowreader-monitoring/slo-report-*.md",
+      "format": "slo_reports",
+      "update_frequency": 3600
+    }
+  },
+  "time_windows": {
+    "slo_measurement": {
+      "availability": "30d",
+      "latency": "24h",
+      "error_rate": "24h",
+      "quality": "24h",
+      "security": "24h"
+    },
+    "error_budget": {
+      "availability": "30d",
+      "api_availability": "7d",
+      "latency": "24h",
+      "error_rate": "24h"
+    }
+  },
+  "slo_targets": {
+    "availability": {
+      "target": 99.5,
+      "warning": 99.8,
+      "critical": 99.5,
+      "unit": "%",
+      "direction": "higher_is_better"
+    },
+    "p95_latency_ms": {
+      "target": 1500,
+      "warning": 2000,
+      "critical": 2500,
+      "unit": "ms",
+      "direction": "lower_is_better"
+    },
+    "p99_latency_ms": {
+      "target": 2500,
+      "warning": 3000,
+      "critical": 4000,
+      "unit": "ms",
+      "direction": "lower_is_better"
+    },
+    "error_rate_percent": {
+      "target": 1.0,
+      "warning": 2.0,
+      "critical": 5.0,
+      "unit": "%",
+      "direction": "lower_is_better"
+    },
+    "dialog_success_rate_percent": {
+      "target": 95.0,
+      "warning": 90.0,
+      "critical": 85.0,
+      "unit": "%",
+      "direction": "higher_is_better"
+    },
+    "security_compliance_percent": {
+      "target": 100.0,
+      "warning": 99.0,
+      "critical": 95.0,
+      "unit": "%",
+      "direction": "higher_is_better"
+    }
+  },
+  "panels": [
+    {
+      "id": "slo_status_overview",
+      "title": "SLO Compliance Overview",
+      "type": "slo_status_grid",
+      "position": {"x": 0, "y": 0, "width": 12, "height": 3},
+      "layout": "horizontal",
+      "metrics": [
+        {
+          "name": "System Availability",
+          "slo_key": "availability",
+          "query": "slo_compliance.availability",
+          "time_window": "30d",
+          "display": {
+            "show_target": true,
+            "show_current": true,
+            "show_trend": true,
+            "show_budget": true
+          }
+        },
+        {
+          "name": "P95 Latency",
+          "slo_key": "p95_latency_ms",
+          "query": "slo_compliance.p95_latency_ms",
+          "time_window": "24h",
+          "display": {
+            "show_target": true,
+            "show_current": true,
+            "show_trend": true,
+            "show_budget": false
+          }
+        },
+        {
+          "name": "Error Rate",
+          "slo_key": "error_rate_percent",
+          "query": "slo_compliance.error_rate_percent",
+          "time_window": "24h",
+          "display": {
+            "show_target": true,
+            "show_current": true,
+            "show_trend": true,
+            "show_budget": true
+          }
+        },
+        {
+          "name": "Dialog Success",
+          "slo_key": "dialog_success_rate_percent",
+          "query": "slo_compliance.dialog_success_rate_percent",
+          "time_window": "24h",
+          "display": {
+            "show_target": true,
+            "show_current": true,
+            "show_trend": true,
+            "show_budget": false
+          }
+        },
+        {
+          "name": "Security Compliance",
+          "slo_key": "security_compliance_percent",
+          "query": "slo_compliance.security_compliance_percent",
+          "time_window": "24h",
+          "display": {
+            "show_target": true,
+            "show_current": true,
+            "show_trend": true,
+            "show_budget": false
+          }
+        }
+      ],
+      "styling": {
+        "status_colors": {
+          "healthy": "#4ECDC4",
+          "warning": "#FFA500",
+          "violation": "#FF6B6B",
+          "critical": "#DC143C"
+        },
+        "show_sparklines": true,
+        "compact_mode": false
+      }
+    },
+    {
+      "id": "error_budget_status",
+      "title": "Error Budget Consumption",
+      "type": "error_budget_panel",
+      "position": {"x": 0, "y": 3, "width": 12, "height": 4},
+      "layout": "budget_bars",
+      "metrics": [
+        {
+          "name": "Availability Budget (30d)",
+          "slo_key": "availability",
+          "budget_calculation": {
+            "target": 99.5,
+            "current_query": "slo_compliance.availability",
+            "window": "30d"
+          },
+          "thresholds": {
+            "healthy": 50,
+            "warning": 85,
+            "critical": 100
+          },
+          "display": {
+            "show_remaining": true,
+            "show_burn_rate": true,
+            "show_projected_exhaustion": true,
+            "format": "percentage"
+          }
+        },
+        {
+          "name": "API Availability Budget (7d)",
+          "slo_key": "api_availability",
+          "budget_calculation": {
+            "target": 99.9,
+            "current_query": "slo_compliance.api_availability",
+            "window": "7d"
+          },
+          "thresholds": {
+            "healthy": 50,
+            "warning": 85,
+            "critical": 100
+          },
+          "display": {
+            "show_remaining": true,
+            "show_burn_rate": true,
+            "show_projected_exhaustion": true,
+            "format": "requests"
+          }
+        },
+        {
+          "name": "Error Rate Budget (24h)",
+          "slo_key": "error_rate_percent",
+          "budget_calculation": {
+            "target": 1.0,
+            "current_query": "slo_compliance.error_rate_percent",
+            "window": "24h"
+          },
+          "thresholds": {
+            "healthy": 50,
+            "warning": 85,
+            "critical": 100
+          },
+          "display": {
+            "show_remaining": true,
+            "show_burn_rate": true,
+            "show_projected_exhaustion": true,
+            "format": "percentage"
+          }
+        }
+      ],
+      "styling": {
+        "bar_height": 30,
+        "show_labels": true,
+        "show_values": true,
+        "budget_colors": {
+          "consumed": "#FF6B6B",
+          "remaining": "#4ECDC4",
+          "projected": "#FFA500"
+        }
+      }
+    },
+    {
+      "id": "availability_slo_detail",
+      "title": "Availability SLO - Detailed View",
+      "type": "slo_detail_panel",
+      "position": {"x": 0, "y": 7, "width": 6, "height": 6},
+      "slo_metric": "availability",
+      "components": [
+        {
+          "type": "current_status",
+          "query": "slo_compliance.availability.current",
+          "display": {
+            "format": "large_number",
+            "unit": "%",
+            "decimals": 3,
+            "color_by_threshold": true
+          }
+        },
+        {
+          "type": "trend_chart",
+          "query": "slo_data.availability_data[]",
+          "time_range": "7d",
+          "display": {
+            "line_color": "#4ECDC4",
+            "fill": true,
+            "fill_opacity": 0.2,
+            "show_target_line": true,
+            "show_threshold_lines": true
+          }
+        },
+        {
+          "type": "uptime_calendar",
+          "query": "slo_data.availability_data[]",
+          "time_range": "30d",
+          "display": {
+            "cell_size": 12,
+            "colors": {
+              "up": "#4ECDC4",
+              "down": "#FF6B6B",
+              "partial": "#FFA500"
+            }
+          }
+        },
+        {
+          "type": "incidents_list",
+          "query": "incidents[].availability_related",
+          "time_range": "30d",
+          "display": {
+            "max_items": 5,
+            "show_duration": true,
+            "show_impact": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "latency_slo_detail",
+      "title": "Latency SLO - P95 & P99",
+      "type": "slo_detail_panel",
+      "position": {"x": 6, "y": 7, "width": 6, "height": 6},
+      "slo_metric": "latency",
+      "components": [
+        {
+          "type": "percentile_gauges",
+          "metrics": [
+            {
+              "name": "P95 Latency",
+              "query": "slo_compliance.p95_latency_ms.current",
+              "target": 1500,
+              "warning": 2000,
+              "critical": 2500,
+              "unit": "ms"
+            },
+            {
+              "name": "P99 Latency",
+              "query": "slo_compliance.p99_latency_ms.current",
+              "target": 2500,
+              "warning": 3000,
+              "critical": 4000,
+              "unit": "ms"
+            }
+          ],
+          "display": {
+            "layout": "side_by_side",
+            "show_target_arc": true,
+            "show_threshold_markers": true
+          }
+        },
+        {
+          "type": "latency_heatmap",
+          "query": "slo_data.p95_latency_ms_data[]",
+          "time_range": "24h",
+          "display": {
+            "bucket_size": "5m",
+            "color_scheme": "blues",
+            "show_percentile_lines": [50, 95, 99]
+          }
+        },
+        {
+          "type": "latency_distribution",
+          "query": "slo_data.latency_samples[]",
+          "time_range": "1h",
+          "display": {
+            "histogram_bins": 20,
+            "show_mean": true,
+            "show_percentiles": [50, 95, 99],
+            "color": "#45B7D1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "error_rate_slo_detail",
+      "title": "Error Rate SLO Analysis",
+      "type": "slo_detail_panel",
+      "position": {"x": 0, "y": 13, "width": 8, "height": 5},
+      "slo_metric": "error_rate",
+      "components": [
+        {
+          "type": "error_rate_timeline",
+          "query": "slo_data.error_rate_percent_data[]",
+          "time_range": "24h",
+          "display": {
+            "line_color": "#FF6B6B",
+            "fill": true,
+            "fill_opacity": 0.3,
+            "show_target_line": true,
+            "show_threshold_lines": true,
+            "alert_markers": true
+          }
+        },
+        {
+          "type": "error_breakdown",
+          "query": "error_data.by_endpoint[]",
+          "time_range": "24h",
+          "display": {
+            "chart_type": "stacked_bar",
+            "group_by": "endpoint",
+            "colors": ["#FF6B6B", "#FFA500", "#FF69B4"]
+          }
+        },
+        {
+          "type": "error_rate_stats",
+          "query": "slo_data.error_rate_percent_data[]",
+          "time_range": "24h",
+          "display": {
+            "stats": ["current", "avg", "max", "trend"],
+            "format": "compact_table"
+          }
+        }
+      ]
+    },
+    {
+      "id": "slo_alerts_panel",
+      "title": "Active SLO Alerts & Violations",
+      "type": "alert_panel",
+      "position": {"x": 8, "y": 13, "width": 4, "height": 5},
+      "query": "slo_alerts[]",
+      "filters": {
+        "status": ["active", "firing"],
+        "severity": ["warning", "critical"]
+      },
+      "components": [
+        {
+          "type": "alert_counter",
+          "display": {
+            "group_by": "severity",
+            "colors": {
+              "critical": "#DC143C",
+              "warning": "#FFA500",
+              "info": "#4ECDC4"
+            }
+          }
+        },
+        {
+          "type": "alert_list",
+          "display": {
+            "max_items": 10,
+            "show_timestamp": true,
+            "show_duration": true,
+            "show_actions": true,
+            "compact_mode": true
+          }
+        },
+        {
+          "type": "alert_timeline",
+          "time_range": "24h",
+          "display": {
+            "height": 60,
+            "show_resolved": true,
+            "color_by_severity": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "slo_burn_rate_panel",
+      "title": "SLO Burn Rate Analysis",
+      "type": "burn_rate_panel",
+      "position": {"x": 0, "y": 18, "width": 12, "height": 4},
+      "metrics": [
+        {
+          "name": "Availability Burn Rate",
+          "slo_key": "availability",
+          "calculation": {
+            "error_budget_target": 0.5,
+            "measurement_windows": ["1h", "6h", "24h", "7d"],
+            "burn_rate_thresholds": {
+              "fast": 14.4,
+              "slow": 1.0
+            }
+          },
+          "alerts": {
+            "fast_burn": {
+              "threshold": 14.4,
+              "window": "1h",
+              "severity": "critical"
+            },
+            "slow_burn": {
+              "threshold": 1.0,
+              "window": "6h",
+              "severity": "warning"
+            }
+          }
+        },
+        {
+          "name": "Error Rate Burn Rate",
+          "slo_key": "error_rate",
+          "calculation": {
+            "error_budget_target": 1.0,
+            "measurement_windows": ["5m", "1h", "6h"],
+            "burn_rate_thresholds": {
+              "fast": 6.0,
+              "slow": 1.0
+            }
+          },
+          "alerts": {
+            "fast_burn": {
+              "threshold": 6.0,
+              "window": "5m",
+              "severity": "critical"
+            },
+            "slow_burn": {
+              "threshold": 1.0,
+              "window": "1h",
+              "severity": "warning"
+            }
+          }
+        }
+      ],
+      "display": {
+        "chart_type": "multi_series_line",
+        "show_burn_rate_thresholds": true,
+        "show_budget_depletion_projection": true,
+        "colors": {
+          "fast_burn": "#FF0000",
+          "moderate_burn": "#FFA500",
+          "slow_burn": "#4ECDC4"
+        }
+      }
+    },
+    {
+      "id": "slo_history_panel",
+      "title": "SLO Compliance History",
+      "type": "history_panel",
+      "position": {"x": 0, "y": 22, "width": 8, "height": 4},
+      "time_range": "30d",
+      "metrics": [
+        "availability",
+        "p95_latency_ms",
+        "error_rate_percent",
+        "security_compliance_percent"
+      ],
+      "display": {
+        "chart_type": "multi_line",
+        "normalize": true,
+        "show_slo_targets": true,
+        "show_incidents": true,
+        "show_deployments": true,
+        "legend_position": "bottom"
+      }
+    },
+    {
+      "id": "slo_forecasting_panel",
+      "title": "SLO Trend Forecasting",
+      "type": "forecasting_panel",
+      "position": {"x": 8, "y": 22, "width": 4, "height": 4},
+      "forecasting": {
+        "algorithm": "linear_regression",
+        "prediction_window": "7d",
+        "confidence_interval": 0.95,
+        "include_seasonality": true
+      },
+      "metrics": [
+        {
+          "name": "Availability Trend",
+          "slo_key": "availability",
+          "historical_window": "30d"
+        },
+        {
+          "name": "Latency Trend",
+          "slo_key": "p95_latency_ms",
+          "historical_window": "7d"
+        },
+        {
+          "name": "Error Rate Trend",
+          "slo_key": "error_rate_percent",
+          "historical_window": "7d"
+        }
+      ],
+      "display": {
+        "show_predictions": true,
+        "show_confidence_bands": true,
+        "highlight_slo_violations": true,
+        "colors": {
+          "historical": "#4ECDC4",
+          "prediction": "#45B7D1",
+          "confidence_band": "#E8F4FD"
+        }
+      }
+    }
+  ],
+  "alerting": {
+    "enabled": true,
+    "slo_alert_rules": [
+      {
+        "name": "SLO Violation - System Availability",
+        "condition": "slo_compliance.availability < 99.5",
+        "severity": "critical",
+        "evaluation_window": "5m",
+        "for": "0m",
+        "message": "System availability SLO violated: {{value}}% < 99.5%"
+      },
+      {
+        "name": "SLO Warning - P95 Latency",
+        "condition": "slo_compliance.p95_latency_ms > 2000",
+        "severity": "warning",
+        "evaluation_window": "10m",
+        "for": "5m",
+        "message": "P95 latency approaching SLO limit: {{value}}ms > 2000ms"
+      },
+      {
+        "name": "SLO Critical - P95 Latency",
+        "condition": "slo_compliance.p95_latency_ms > 2500",
+        "severity": "critical",
+        "evaluation_window": "5m",
+        "for": "0m",
+        "message": "P95 latency SLO violated: {{value}}ms > 2500ms"
+      },
+      {
+        "name": "Error Budget Critical - Availability",
+        "condition": "error_budget.availability.consumed > 85",
+        "severity": "critical",
+        "evaluation_window": "1m",
+        "for": "0m",
+        "message": "Availability error budget critically low: {{value}}% consumed"
+      },
+      {
+        "name": "Error Budget Warning - Error Rate",
+        "condition": "error_budget.error_rate.consumed > 50",
+        "severity": "warning",
+        "evaluation_window": "5m",
+        "for": "2m",
+        "message": "Error rate budget consumption elevated: {{value}}% consumed"
+      },
+      {
+        "name": "Fast Burn Rate - Availability",
+        "condition": "burn_rate.availability.1h > 14.4",
+        "severity": "critical",
+        "evaluation_window": "2m",
+        "for": "0m",
+        "message": "Fast error budget burn detected for availability: {{value}}x normal rate"
+      }
+    ],
+    "notification_channels": [
+      {
+        "name": "slo-alerts-slack",
+        "type": "slack",
+        "settings": {
+          "webhook_url": "${SLACK_SLO_WEBHOOK}",
+          "channel": "#slo-alerts",
+          "username": "SLO Monitor"
+        }
+      },
+      {
+        "name": "slo-alerts-email",
+        "type": "email",
+        "settings": {
+          "recipients": ["sre-team@company.com"],
+          "subject": "FlowReader SLO Alert: {{alert_name}}"
+        }
+      },
+      {
+        "name": "slo-critical-pagerduty",
+        "type": "pagerduty",
+        "settings": {
+          "integration_key": "${PAGERDUTY_INTEGRATION_KEY}",
+          "severity": "critical"
+        }
+      }
+    ]
+  },
+  "annotations": [
+    {
+      "name": "SLO Violations",
+      "color": "#FF0000",
+      "source": "slo_alerts",
+      "query": "alert_events[].slo_violation",
+      "display": {
+        "icon": "exclamation-triangle",
+        "show_duration": true
+      }
+    },
+    {
+      "name": "Deployments",
+      "color": "#4ECDC4",
+      "source": "deployment_events",
+      "query": "deployments[]",
+      "display": {
+        "icon": "rocket",
+        "show_version": true
+      }
+    },
+    {
+      "name": "Maintenance Windows",
+      "color": "#FFA500",
+      "source": "maintenance_calendar",
+      "query": "maintenance_windows[]",
+      "display": {
+        "icon": "wrench",
+        "show_duration": true
+      }
+    },
+    {
+      "name": "Incidents",
+      "color": "#FF6B6B",
+      "source": "incident_management",
+      "query": "incidents[]",
+      "display": {
+        "icon": "fire",
+        "show_severity": true
+      }
+    }
+  ],
+  "variables": [
+    {
+      "name": "time_range",
+      "type": "interval",
+      "default": "24h",
+      "options": ["15m", "1h", "6h", "24h", "7d", "30d"]
+    },
+    {
+      "name": "slo_metric",
+      "type": "custom",
+      "default": "all",
+      "options": [
+        {"label": "All SLOs", "value": "all"},
+        {"label": "Availability", "value": "availability"},
+        {"label": "Latency", "value": "latency"},
+        {"label": "Error Rate", "value": "error_rate"},
+        {"label": "Quality", "value": "quality"},
+        {"label": "Security", "value": "security"}
+      ]
+    },
+    {
+      "name": "environment",
+      "type": "constant",
+      "value": "production"
+    }
+  ],
+  "templating": {
+    "enable_time_range_templating": true,
+    "enable_metric_filtering": true,
+    "enable_drill_down": true
+  },
+  "export_options": {
+    "formats": ["png", "pdf", "json", "csv"],
+    "schedules": [
+      {
+        "name": "Daily SLO Report",
+        "format": "pdf",
+        "schedule": "0 9 * * *",
+        "recipients": ["sre-team@company.com"],
+        "panels": ["slo_status_overview", "error_budget_status", "slo_alerts_panel"]
+      },
+      {
+        "name": "Weekly SLO Executive Summary",
+        "format": "pdf",
+        "schedule": "0 8 * * 1",
+        "recipients": ["leadership@company.com"],
+        "panels": ["slo_status_overview", "error_budget_status", "slo_history_panel"]
+      },
+      {
+        "name": "Monthly SLO Data Export",
+        "format": "csv",
+        "schedule": "0 1 1 * *",
+        "recipients": ["data-team@company.com"],
+        "include_raw_data": true
+      }
+    ]
+  },
+  "integrations": {
+    "slo_monitoring_script": {
+      "enabled": true,
+      "script_path": "/scripts/monitoring/slo-check.sh",
+      "data_refresh_command": "slo-check.sh status --window 3600"
+    },
+    "incident_management": {
+      "enabled": false,
+      "webhook_url": "${INCIDENT_WEBHOOK}",
+      "auto_create_incidents": true,
+      "severity_mapping": {
+        "critical": "sev-1",
+        "warning": "sev-2"
+      }
+    },
+    "change_management": {
+      "enabled": false,
+      "source": "git_webhooks",
+      "deployment_annotation": true
+    }
+  },
+  "themes": {
+    "slo_light": {
+      "background": "#FFFFFF",
+      "panel_background": "#F8F9FA",
+      "text_color": "#2C3E50",
+      "slo_healthy": "#28A745",
+      "slo_warning": "#FFC107",
+      "slo_violation": "#DC3545",
+      "slo_critical": "#721C24"
+    },
+    "slo_dark": {
+      "background": "#1A1A1A",
+      "panel_background": "#2D2D2D",
+      "text_color": "#FFFFFF",
+      "slo_healthy": "#28A745",
+      "slo_warning": "#FFC107",
+      "slo_violation": "#DC3545",
+      "slo_critical": "#721C24"
+    }
+  },
+  "mobile_responsive": {
+    "enabled": true,
+    "breakpoints": {
+      "mobile": 768,
+      "tablet": 1024
+    },
+    "mobile_layout": {
+      "stack_panels": true,
+      "hide_detailed_panels": true,
+      "priority_panels": [
+        "slo_status_overview",
+        "error_budget_status",
+        "slo_alerts_panel"
+      ]
+    }
+  }
+}

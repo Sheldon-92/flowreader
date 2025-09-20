@@ -1,0 +1,203 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Custom CSS for FlowReader */
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-white dark:bg-reading-dark text-reading-text dark:text-reading-text-light;
+    @apply antialiased;
+  }
+  
+  /* Reading font for book content */
+  .reading-content {
+    font-family: Charter, Georgia, serif;
+    @apply text-lg leading-relaxed;
+    /* Optimal reading line length */
+    max-width: 65ch;
+  }
+  
+  /* High contrast focus for accessibility */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary-600 ring-offset-2 ring-offset-white dark:ring-offset-reading-dark;
+  }
+}
+
+@layer components {
+  /* Button variants */
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  
+  .btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-100 text-gray-900 hover:bg-gray-200 active:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700;
+  }
+  
+  .btn-ghost {
+    @apply text-gray-700 hover:bg-gray-100 active:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800 dark:active:bg-gray-700;
+  }
+  
+  .btn-ai {
+    @apply bg-ai-600 text-white hover:bg-ai-700 active:bg-ai-800;
+  }
+  
+  .btn-audio {
+    @apply bg-accent-600 text-white hover:bg-accent-700 active:bg-accent-800;
+  }
+  
+  /* Card component */
+  .card {
+    @apply bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm;
+  }
+  
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-700;
+  }
+  
+  /* Text highlighting for audio sync */
+  .text-highlight {
+    @apply bg-accent-200 dark:bg-accent-800 transition-colors duration-200;
+  }
+  
+  .text-highlight-word {
+    @apply bg-accent-300 dark:bg-accent-700 transition-colors duration-100;
+  }
+  
+  /* Selection highlight */
+  .text-selected {
+    @apply bg-blue-200 dark:bg-blue-800;
+  }
+  
+  /* Loading states */
+  .loading-spinner {
+    @apply animate-spin rounded-full border-2 border-gray-300 border-t-primary-600;
+  }
+  
+  /* Skeleton loading */
+  .skeleton {
+    @apply animate-pulse bg-gray-200 dark:bg-gray-700 rounded;
+  }
+}
+
+@layer utilities {
+  /* Custom scrollbars */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.gray.400') theme('colors.gray.100');
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-800;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-gray-400 dark:bg-gray-600 rounded-full;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500 dark:bg-gray-500;
+  }
+  
+  /* Text selection styling */
+  ::selection {
+    @apply bg-primary-200 text-primary-900;
+  }
+  
+  ::-moz-selection {
+    @apply bg-primary-200 text-primary-900;
+  }
+  
+  /* Safe area adjustments for mobile */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Reading-specific utilities */
+  .reading-focus {
+    /* Reduce eye strain */
+    line-height: 1.7;
+    letter-spacing: 0.01em;
+  }
+  
+  .reading-night {
+    /* Dark reading mode optimizations */
+    @apply bg-gray-900 text-gray-100;
+    /* Slightly warmer white to reduce blue light */
+    color: #f5f3f0;
+  }
+  
+  /* Animation utilities */
+  .fade-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+  
+  .slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+  }
+  
+  .slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+}
+
+/* Keyframes for animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    @apply text-black bg-white;
+  }
+  
+  .reading-content {
+    font-size: 12pt;
+    line-height: 1.4;
+  }
+}

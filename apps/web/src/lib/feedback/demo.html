@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowReader Feedback System Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .demo-card {
+            @apply bg-white border border-gray-200 rounded-lg p-6 shadow-sm;
+        }
+        .demo-button {
+            @apply bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors;
+        }
+        .demo-input {
+            @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500;
+        }
+        .demo-select {
+            @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500;
+        }
+        .demo-textarea {
+            @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none;
+        }
+        .demo-badge {
+            @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+        }
+        .demo-badge-success { @apply bg-green-100 text-green-800; }
+        .demo-badge-warning { @apply bg-yellow-100 text-yellow-800; }
+        .demo-badge-error { @apply bg-red-100 text-red-800; }
+        .demo-badge-info { @apply bg-blue-100 text-blue-800; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">FlowReader Feedback System Demo</h1>
+            <p class="text-gray-600">Privacy-first feedback collection with operational controls</p>
+        </div>
+
+        <!-- System Status -->
+        <div class="demo-card mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">System Status</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="text-center">
+                    <div class="demo-badge demo-badge-success mb-2" id="status-enabled">Enabled</div>
+                    <p class="text-sm text-gray-600">Feature Status</p>
+                </div>
+                <div class="text-center">
+                    <div class="demo-badge demo-badge-info mb-2" id="status-rollout">10%</div>
+                    <p class="text-sm text-gray-600">Rollout Percentage</p>
+                </div>
+                <div class="text-center">
+                    <div class="demo-badge demo-badge-warning mb-2" id="status-submissions">0/3</div>
+                    <p class="text-sm text-gray-600">Submissions Used</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Panel -->
+        <div class="demo-card mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Configuration</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Feature Enabled</label>
+                    <select id="config-enabled" class="demo-select">
+                        <option value="true">Enabled</option>
+                        <option value="false">Disabled</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Rollout Percentage</label>
+                    <input type="range" id="config-rollout" min="0" max="100" value="10"
+                           class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    <div class="text-center text-sm text-gray-600 mt-1" id="rollout-display">10%</div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Max Submissions per Session</label>
+                    <input type="number" id="config-max-submissions" min="1" max="10" value="3" class="demo-input">
+                </div>
+                <div>
+                    <button onclick="updateConfiguration()" class="demo-button w-full">Update Configuration</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feedback Form Demo -->
+        <div class="demo-card mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Feedback Form Demo</h2>
+            <form id="feedback-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Feedback Type</label>
+                    <select id="feedback-type" class="demo-select">
+                        <option value="general">General Feedback</option>
+                        <option value="bug">Bug Report</option>
+                        <option value="feature">Feature Request</option>
+                        <option value="praise">Positive Feedback</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Rating</label>
+                    <div class="flex space-x-2" id="rating-buttons">
+                        <button type="button" onclick="setRating(1)" class="rating-btn px-3 py-2 border rounded-lg transition-colors" data-rating="1">😞 1</button>
+                        <button type="button" onclick="setRating(2)" class="rating-btn px-3 py-2 border rounded-lg transition-colors" data-rating="2">😐 2</button>
+                        <button type="button" onclick="setRating(3)" class="rating-btn px-3 py-2 border rounded-lg transition-colors" data-rating="3">🙂 3</button>
+                        <button type="button" onclick="setRating(4)" class="rating-btn px-3 py-2 border rounded-lg transition-colors" data-rating="4">😊 4</button>
+                        <button type="button" onclick="setRating(5)" class="rating-btn px-3 py-2 border rounded-lg transition-colors" data-rating="5">🤩 5</button>
+                    </div>
+                    <input type="hidden" id="feedback-rating" value="3">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                    <select id="feedback-category" class="demo-select">
+                        <option value="usability">Usability & Design</option>
+                        <option value="performance">Performance & Speed</option>
+                        <option value="ai-interaction">AI Conversations</option>
+                        <option value="reading-experience">Reading Experience</option>
+                        <option value="technical">Technical Issues</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+                    <textarea id="feedback-description" rows="4" maxlength="1000" class="demo-textarea"
+                              placeholder="Please share your thoughts, suggestions, or describe any issues you've experienced..."></textarea>
+                    <div class="text-right text-sm text-gray-500 mt-1">
+                        <span id="char-count">0</span>/1000 characters
+                    </div>
+                </div>
+
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div class="flex items-start">
+                        <svg class="w-5 h-5 text-blue-600 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div class="text-sm text-blue-800">
+                            <strong>Privacy Notice:</strong> Your feedback is collected anonymously. We do not store any personal information.
+                            Please avoid including email addresses, names, or other personal details in your message.
+                        </div>
+                    </div>
+                </div>
+
+                <div id="feedback-error" class="hidden bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p class="text-sm text-red-800"></p>
+                </div>
+
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="clearForm()" class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors">
+                        Clear
+                    </button>
+                    <button type="submit" id="submit-btn" class="demo-button">
+                        Submit Feedback
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Test Cases -->
+        <div class="demo-card mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Privacy Test Cases</h2>
+            <div class="space-y-3">
+                <button onclick="testPII('email')" class="demo-button mr-2">Test Email Detection</button>
+                <button onclick="testPII('phone')" class="demo-button mr-2">Test Phone Detection</button>
+                <button onclick="testPII('credit')" class="demo-button mr-2">Test Credit Card Detection</button>
+                <button onclick="testPII('ssn')" class="demo-button mr-2">Test SSN Detection</button>
+                <button onclick="testValidFeedback()" class="demo-button mr-2">Test Valid Feedback</button>
+                <button onclick="clearSession()" class="demo-button bg-red-600 hover:bg-red-700">Clear Session</button>
+            </div>
+        </div>
+
+        <!-- Session Info -->
+        <div class="demo-card">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Session Information</h2>
+            <div class="bg-gray-50 p-4 rounded-lg font-mono text-sm">
+                <div><strong>Session ID:</strong> <span id="session-id">Loading...</span></div>
+                <div><strong>Feedback Count:</strong> <span id="feedback-count">0</span></div>
+                <div><strong>Can Submit:</strong> <span id="can-submit">true</span></div>
+                <div><strong>Feature Enabled:</strong> <span id="feature-enabled">true</span></div>
+                <div><strong>Current Route:</strong> <span id="current-route">/demo</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulate the feedback system classes
+        class DemoSessionManager {
+            static SESSION_KEY = 'demo_fr_anonymous_session';
+            static SESSION_DURATION = 24 * 60 * 60 * 1000;
+
+            static generateSessionId() {
+                const array = new Uint8Array(16);
+                crypto.getRandomValues(array);
+                return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+            }
+
+            static getOrCreateSession() {
+                const stored = localStorage.getItem(this.SESSION_KEY);
+                const now = new Date().toISOString();
+
+                if (stored) {
+                    try {
+                        const session = JSON.parse(stored);
+                        const sessionAge = Date.now() - new Date(session.createdAt).getTime();
+
+                        if (sessionAge < this.SESSION_DURATION) {
+                            session.lastActiveAt = now;
+                            this.saveSession(session);
+                            return session;
+                        }
+                    } catch (error) {
+                        console.warn('Invalid session data, creating new session');
+                    }
+                }
+
+                const newSession = {
+                    id: this.generateSessionId(),
+                    createdAt: now,
+                    lastActiveAt: now,
+                    feedbackCount: 0
+                };
+
+                this.saveSession(newSession);
+                return newSession;
+            }
+
+            static incrementFeedbackCount() {
+                const session = this.getOrCreateSession();
+                session.feedbackCount += 1;
+                session.lastActiveAt = new Date().toISOString();
+                this.saveSession(session);
+                return session;
+            }
+
+            static saveSession(session) {
+                localStorage.setItem(this.SESSION_KEY, JSON.stringify(session));
+            }
+
+            static clearSession() {
+                localStorage.removeItem(this.SESSION_KEY);
+            }
+        }
+
+        class DemoFeatureToggle {
+            static CONFIG_KEY = 'demo_feedback_feature_config';
+            static DEFAULT_CONFIG = {
+                enabled: true,
+                rolloutPercentage: 10,
+                maxSubmissionsPerSession: 3,
+                allowedRoutes: ['/demo']
+            };
+
+            static getConfig() {
+                try {
+                    const stored = localStorage.getItem(this.CONFIG_KEY);
+                    if (stored) {
+                        return { ...this.DEFAULT_CONFIG, ...JSON.parse(stored) };
+                    }
+                } catch (error) {
+                    console.warn('Invalid feature config, using defaults');
+                }
+                return this.DEFAULT_CONFIG;
+            }
+
+            static updateConfig(newConfig) {
+                const currentConfig = this.getConfig();
+                const updatedConfig = { ...currentConfig, ...newConfig };
+                localStorage.setItem(this.CONFIG_KEY, JSON.stringify(updatedConfig));
+            }
+
+            static isEnabledForUser() {
+                const config = this.getConfig();
+                if (!config.enabled) return false;
+
+                // Simple rollout simulation
+                const sessionId = DemoSessionManager.getOrCreateSession().id;
+                const hash = this.simpleHash(sessionId) % 100;
+                return hash < config.rolloutPercentage;
+            }
+
+            static simpleHash(str) {
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    const char = str.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash;
+                }
+                return Math.abs(hash);
+            }
+
+            static canSubmitFeedback() {
+                const config = this.getConfig();
+                const session = DemoSessionManager.getOrCreateSession();
+                return session.feedbackCount < config.maxSubmissionsPerSession;
+            }
+        }
+
+        class DemoValidator {
+            static validateForm(data) {
+                const errors = {};
+
+                if (!data.type) errors.type = 'Type is required';
+                if (!data.rating || data.rating < 1 || data.rating > 5) {
+                    errors.rating = 'Rating must be between 1 and 5';
+                }
+                if (!data.category) errors.category = 'Category is required';
+                if (!data.description || data.description.trim().length < 10) {
+                    errors.description = 'Description must be at least 10 characters';
+                }
+                if (data.description && data.description.length > 1000) {
+                    errors.description = 'Description must be no more than 1000 characters';
+                }
+
+                // PII detection
+                if (data.description) {
+                    const piiPatterns = [
+                        { pattern: /\b[\w._%+-]+@[\w.-]+\.[A-Z|a-z]{2,}\b/i, message: 'Please do not include email addresses' },
+                        { pattern: /\b\d{3}-\d{2}-\d{4}\b/, message: 'Please do not include SSN' },
+                        { pattern: /\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/, message: 'Please do not include credit card numbers' },
+                        { pattern: /\b\d{3}-\d{3}-\d{4}\b/, message: 'Please do not include phone numbers' }
+                    ];
+
+                    for (const { pattern, message } of piiPatterns) {
+                        if (pattern.test(data.description)) {
+                            errors.description = message;
+                            break;
+                        }
+                    }
+                }
+
+                return {
+                    isValid: Object.keys(errors).length === 0,
+                    errors
+                };
+            }
+        }
+
+        // Global state
+        let selectedRating = 3;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            updateUI();
+            setupEventListeners();
+            setRating(3); // Default rating
+        });
+
+        function setupEventListeners() {
+            // Update rollout display
+            document.getElementById('config-rollout').addEventListener('input', function() {
+                document.getElementById('rollout-display').textContent = this.value + '%';
+            });
+
+            // Character counter
+            document.getElementById('feedback-description').addEventListener('input', function() {
+                document.getElementById('char-count').textContent = this.value.length;
+            });
+
+            // Form submission
+            document.getElementById('feedback-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                submitFeedback();
+            });
+        }
+
+        function updateUI() {
+            const config = DemoFeatureToggle.getConfig();
+            const session = DemoSessionManager.getOrCreateSession();
+            const isEnabled = DemoFeatureToggle.isEnabledForUser();
+            const canSubmit = DemoFeatureToggle.canSubmitFeedback();
+
+            // Update status badges
+            document.getElementById('status-enabled').textContent = config.enabled ? 'Enabled' : 'Disabled';
+            document.getElementById('status-enabled').className =
+                'demo-badge ' + (config.enabled ? 'demo-badge-success' : 'demo-badge-error');
+
+            document.getElementById('status-rollout').textContent = config.rolloutPercentage + '%';
+            document.getElementById('status-submissions').textContent =
+                session.feedbackCount + '/' + config.maxSubmissionsPerSession;
+
+            // Update configuration inputs
+            document.getElementById('config-enabled').value = config.enabled.toString();
+            document.getElementById('config-rollout').value = config.rolloutPercentage;
+            document.getElementById('rollout-display').textContent = config.rolloutPercentage + '%';
+            document.getElementById('config-max-submissions').value = config.maxSubmissionsPerSession;
+
+            // Update session info
+            document.getElementById('session-id').textContent = session.id.substring(0, 8) + '...';
+            document.getElementById('feedback-count').textContent = session.feedbackCount;
+            document.getElementById('can-submit').textContent = canSubmit;
+            document.getElementById('feature-enabled').textContent = isEnabled;
+
+            // Enable/disable submit button
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = !isEnabled || !canSubmit;
+            if (!isEnabled || !canSubmit) {
+                submitBtn.className = 'px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed';
+                submitBtn.textContent = !isEnabled ? 'Feature Disabled' : 'Limit Reached';
+            } else {
+                submitBtn.className = 'demo-button';
+                submitBtn.textContent = 'Submit Feedback';
+            }
+        }
+
+        function updateConfiguration() {
+            const config = {
+                enabled: document.getElementById('config-enabled').value === 'true',
+                rolloutPercentage: parseInt(document.getElementById('config-rollout').value),
+                maxSubmissionsPerSession: parseInt(document.getElementById('config-max-submissions').value)
+            };
+
+            DemoFeatureToggle.updateConfig(config);
+            updateUI();
+            showMessage('Configuration updated successfully!', 'success');
+        }
+
+        function setRating(rating) {
+            selectedRating = rating;
+            document.getElementById('feedback-rating').value = rating;
+
+            // Update button styles
+            document.querySelectorAll('.rating-btn').forEach(btn => {
+                const btnRating = parseInt(btn.dataset.rating);
+                if (btnRating === rating) {
+                    btn.className = 'rating-btn px-3 py-2 border-2 border-blue-500 bg-blue-50 rounded-lg transition-colors';
+                } else {
+                    btn.className = 'rating-btn px-3 py-2 border border-gray-300 rounded-lg transition-colors hover:border-gray-400';
+                }
+            });
+        }
+
+        function submitFeedback() {
+            const formData = {
+                type: document.getElementById('feedback-type').value,
+                rating: selectedRating,
+                category: document.getElementById('feedback-category').value,
+                description: document.getElementById('feedback-description').value
+            };
+
+            // Validate
+            const validation = DemoValidator.validateForm(formData);
+
+            if (!validation.isValid) {
+                showError(Object.values(validation.errors)[0]);
+                return;
+            }
+
+            // Check feature availability
+            if (!DemoFeatureToggle.isEnabledForUser() || !DemoFeatureToggle.canSubmitFeedback()) {
+                showError('Feedback submission is not available at this time.');
+                return;
+            }
+
+            // Simulate submission
+            setTimeout(() => {
+                DemoSessionManager.incrementFeedbackCount();
+                clearForm();
+                updateUI();
+                showMessage('Thank you for your feedback! Your submission has been recorded.', 'success');
+            }, 500);
+        }
+
+        function clearForm() {
+            document.getElementById('feedback-form').reset();
+            document.getElementById('feedback-description').value = '';
+            document.getElementById('char-count').textContent = '0';
+            setRating(3);
+            hideError();
+        }
+
+        function testPII(type) {
+            const testCases = {
+                email: 'Please contact me at john.doe@example.com for more information about this issue.',
+                phone: 'You can reach me at 555-123-4567 to discuss this bug in more detail.',
+                credit: 'My payment failed with card number 4532 1234 5678 9012 during checkout.',
+                ssn: 'My SSN 123-45-6789 was requested during signup which seems unnecessary.'
+            };
+
+            document.getElementById('feedback-description').value = testCases[type];
+            document.getElementById('char-count').textContent = testCases[type].length;
+            showMessage(`PII test case loaded: ${type}. Try submitting to see validation.`, 'info');
+        }
+
+        function testValidFeedback() {
+            document.getElementById('feedback-type').value = 'feature';
+            setRating(4);
+            document.getElementById('feedback-category').value = 'ai-interaction';
+            document.getElementById('feedback-description').value = 'The AI responses are very helpful, but it would be great if they could include more specific examples when explaining complex concepts. Overall, the reading experience is much more engaging with the AI assistance.';
+            document.getElementById('char-count').textContent = document.getElementById('feedback-description').value.length;
+            showMessage('Valid feedback example loaded. You can submit this safely.', 'info');
+        }
+
+        function clearSession() {
+            DemoSessionManager.clearSession();
+            localStorage.removeItem('demo_feedback_feature_config');
+            localStorage.removeItem('demo_feedback_rate_limit');
+            updateUI();
+            showMessage('Session cleared! A new session will be created.', 'info');
+        }
+
+        function showMessage(message, type = 'info') {
+            // Create temporary message element
+            const messageEl = document.createElement('div');
+            messageEl.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' :
+                type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' :
+                'bg-blue-100 text-blue-800 border border-blue-200'
+            }`;
+            messageEl.textContent = message;
+
+            document.body.appendChild(messageEl);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                messageEl.remove();
+            }, 3000);
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('feedback-error');
+            errorEl.querySelector('p').textContent = message;
+            errorEl.classList.remove('hidden');
+        }
+
+        function hideError() {
+            document.getElementById('feedback-error').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

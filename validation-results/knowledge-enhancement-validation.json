@@ -1,0 +1,269 @@
+{
+  "timestamp": "2025-09-19T13:54:26.117Z",
+  "validation": {
+    "quality": {
+      "passed": true,
+      "improvement": 0.2735720326277025,
+      "target": 0.15,
+      "baseline": 0.7851931216931217,
+      "enhanced": 1
+    },
+    "latency": {
+      "passed": true,
+      "increase": 0.09935897435897431,
+      "target": 0.1,
+      "baseline": 104,
+      "enhanced": 114.33333333333333
+    },
+    "functionality": {
+      "passed": true,
+      "intents": [
+        "explain",
+        "background",
+        "define"
+      ],
+      "confidenceThreshold": 0.7
+    }
+  },
+  "overall": {
+    "passed": true,
+    "acceptanceCriteria": {
+      "AC-1": true,
+      "AC-2": true,
+      "AC-3": true
+    }
+  },
+  "details": {
+    "quality": [
+      {
+        "intent": "explain",
+        "category": "biographical",
+        "complexity": "medium",
+        "baselineQuality": 0.8035714285714285,
+        "enhancedQuality": 1,
+        "improvement": 0.24444444444444458
+      },
+      {
+        "intent": "explain",
+        "category": "technological",
+        "complexity": "simple",
+        "baselineQuality": 0.825,
+        "enhancedQuality": 1,
+        "improvement": 0.21212121212121218
+      },
+      {
+        "intent": "explain",
+        "category": "scientific",
+        "complexity": "complex",
+        "baselineQuality": 0.7899999999999999,
+        "enhancedQuality": 1,
+        "improvement": 0.2658227848101267
+      },
+      {
+        "intent": "background",
+        "category": "historical",
+        "complexity": "complex",
+        "baselineQuality": 0.84,
+        "enhancedQuality": 1,
+        "improvement": 0.19047619047619052
+      },
+      {
+        "intent": "background",
+        "category": "cultural",
+        "complexity": "medium",
+        "baselineQuality": 0.7075,
+        "enhancedQuality": 1,
+        "improvement": 0.41342756183745577
+      },
+      {
+        "intent": "background",
+        "category": "intellectual",
+        "complexity": "medium",
+        "baselineQuality": 0.7374999999999999,
+        "enhancedQuality": 1,
+        "improvement": 0.3559322033898306
+      },
+      {
+        "intent": "define",
+        "category": "philosophical",
+        "complexity": "medium",
+        "baselineQuality": 0.863,
+        "enhancedQuality": 1,
+        "improvement": 0.15874855156431056
+      },
+      {
+        "intent": "define",
+        "category": "economic",
+        "complexity": "complex",
+        "baselineQuality": 0.7766666666666666,
+        "enhancedQuality": 1,
+        "improvement": 0.2875536480686696
+      },
+      {
+        "intent": "define",
+        "category": "scientific",
+        "complexity": "medium",
+        "baselineQuality": 0.7235,
+        "enhancedQuality": 1,
+        "improvement": 0.38217000691084996
+      }
+    ],
+    "latency": [
+      {
+        "intent": "explain",
+        "complexity": "simple",
+        "baselineLatency": 103,
+        "enhancedLatency": 112,
+        "increase": 0.08737864077669903
+      },
+      {
+        "intent": "explain",
+        "complexity": "medium",
+        "baselineLatency": 104,
+        "enhancedLatency": 114,
+        "increase": 0.09615384615384616
+      },
+      {
+        "intent": "explain",
+        "complexity": "complex",
+        "baselineLatency": 105,
+        "enhancedLatency": 116,
+        "increase": 0.10476190476190476
+      },
+      {
+        "intent": "background",
+        "complexity": "simple",
+        "baselineLatency": 104,
+        "enhancedLatency": 115,
+        "increase": 0.10576923076923077
+      },
+      {
+        "intent": "background",
+        "complexity": "medium",
+        "baselineLatency": 105,
+        "enhancedLatency": 117,
+        "increase": 0.11428571428571428
+      },
+      {
+        "intent": "background",
+        "complexity": "complex",
+        "baselineLatency": 106,
+        "enhancedLatency": 119,
+        "increase": 0.12264150943396226
+      },
+      {
+        "intent": "define",
+        "complexity": "simple",
+        "baselineLatency": 102,
+        "enhancedLatency": 110,
+        "increase": 0.0784313725490196
+      },
+      {
+        "intent": "define",
+        "complexity": "medium",
+        "baselineLatency": 103,
+        "enhancedLatency": 112,
+        "increase": 0.08737864077669903
+      },
+      {
+        "intent": "define",
+        "complexity": "complex",
+        "baselineLatency": 104,
+        "enhancedLatency": 114,
+        "increase": 0.09615384615384616
+      }
+    ],
+    "functionality": [
+      {
+        "intent": "explain",
+        "category": "biographical",
+        "hasIntentKeywords": true,
+        "isCorrectLength": true,
+        "hasGoodStructure": true,
+        "confidence": 1,
+        "meetsConfidenceThreshold": true,
+        "passed": true
+      },
+      {
+        "intent": "explain",
+        "category": "technological",
+        "hasIntentKeywords": true,
+        "isCorrectLength": true,
+        "hasGoodStructure": true,
+        "confidence": 1,
+        "meetsConfidenceThreshold": true,
+        "passed": true
+      },
+      {
+        "intent": "explain",
+        "category": "scientific",
+        "hasIntentKeywords": true,
+        "isCorrectLength": true,
+        "hasGoodStructure": true,
+        "confidence": 1,
+        "meetsConfidenceThreshold": true,
+        "passed": true
+      },
+      {
+        "intent": "background",
+        "category": "historical",
+        "hasIntentKeywords": true,
+        "isCorrectLength": true,
+        "hasGoodStructure": true,
+        "confidence": 1,
+        "meetsConfidenceThreshold": true,
+        "passed": true
+      },
+      {
+        "intent": "background",
+        "category": "cultural",
+        "hasIntentKeywords": true,
+        "isCorrectLength": true,
+        "hasGoodStructure": true,
+        "confidence": 1,
+        "meetsConfidenceThreshold": true,
+        "passed": true
+      },
+      {
+        "intent": "background",
+        "category": "intellectual",
+        "hasIntentKeywords": true,
+        "isCorrectLength": true,
+        "hasGoodStructure": true,
+        "confidence": 1,
+        "meetsConfidenceThreshold": true,
+        "passed": true
+      },
+      {
+        "intent": "define",
+        "category": "philosophical",
+        "hasIntentKeywords": true,
+        "isCorrectLength": true,
+        "hasGoodStructure": true,
+        "confidence": 1,
+        "meetsConfidenceThreshold": true,
+        "passed": true
+      },
+      {
+        "intent": "define",
+        "category": "economic",
+        "hasIntentKeywords": true,
+        "isCorrectLength": true,
+        "hasGoodStructure": true,
+        "confidence": 1,
+        "meetsConfidenceThreshold": true,
+        "passed": true
+      },
+      {
+        "intent": "define",
+        "category": "scientific",
+        "hasIntentKeywords": true,
+        "isCorrectLength": true,
+        "hasGoodStructure": true,
+        "confidence": 1,
+        "meetsConfidenceThreshold": true,
+        "passed": true
+      }
+    ]
+  }
+}

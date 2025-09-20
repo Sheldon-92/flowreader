@@ -1,0 +1,38 @@
+{
+  "name": "flowreader",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Multi-modal reading app with AI companion and TTS synchronization",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:web\" \"npm run dev:api\"",
+    "dev:web": "npm run dev --workspace=web",
+    "dev:api": "vercel dev --listen 3001",
+    "build": "npm run build:packages && npm run build:web",
+    "build:packages": "npm run build --workspaces --if-present",
+    "build:web": "npm run build --workspace=web",
+    "test": "npm run test --workspaces --if-present",
+    "test:e2e": "npm run test:e2e --workspace=web",
+    "lint": "npm run lint --workspaces --if-present",
+    "type-check": "npm run type-check --workspaces --if-present",
+    "types:generate": "supabase gen types typescript --local > packages/shared/src/types/supabase.ts",
+    "verify:post-deploy": "tsx scripts/post-deploy-verify.ts",
+    "verify:production": "VERIFY_TIMEOUT=15000 npm run verify:post-deploy",
+    "verify:staging": "VERIFY_TIMEOUT=10000 npm run verify:post-deploy",
+    "test:verify-suite": "tsx scripts/test-verification-suite.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "concurrently": "^8.2.2",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

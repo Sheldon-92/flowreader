@@ -1,0 +1,47 @@
+{
+	"/": [
+		"src/routes/+layout.server.ts",
+		"src/routes/+layout.server.ts"
+	],
+	"/api/books/upload": [
+		"src/routes/api/books/upload/+server.ts"
+	],
+	"/api/tasks/[taskId]/status": [
+		"src/routes/api/tasks/[taskId]/status/+server.ts"
+	],
+	"/auth/login": [
+		"src/routes/auth/login/+page.server.ts",
+		"src/routes/+layout.server.ts"
+	],
+	"/auth/register": [
+		"src/routes/auth/register/+page.server.ts",
+		"src/routes/+layout.server.ts"
+	],
+	"/design-system": [
+		"src/routes/+layout.server.ts"
+	],
+	"/library": [
+		"src/routes/library/+page.server.ts",
+		"src/routes/+layout.server.ts"
+	],
+	"/notes": [
+		"src/routes/notes/+page.server.ts",
+		"src/routes/+layout.server.ts"
+	],
+	"/notes/search": [
+		"src/routes/notes/search/+page.ts",
+		"src/routes/+layout.server.ts"
+	],
+	"/notes/[id]": [
+		"src/routes/notes/[id]/+page.server.ts",
+		"src/routes/+layout.server.ts"
+	],
+	"/read/[bookId]": [
+		"src/routes/read/[bookId]/+page.server.ts",
+		"src/routes/+layout.server.ts"
+	],
+	"/read/[bookId]/notes": [
+		"src/routes/read/[bookId]/notes/+page.ts",
+		"src/routes/+layout.server.ts"
+	]
+}

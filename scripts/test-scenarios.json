@@ -1,0 +1,154 @@
+[
+  {
+    "name": "Simple Question",
+    "description": "Basic question-answer interaction",
+    "bookId": "test-book-001",
+    "intent": "ask",
+    "query": "What is the main theme of this book?",
+    "weight": 0.25,
+    "expectedTokens": {
+      "input": 120,
+      "output": 80
+    },
+    "tags": ["basic", "chat", "baseline"]
+  },
+  {
+    "name": "Knowledge Enhancement - Historical",
+    "description": "Historical context enhancement for selected text",
+    "bookId": "test-book-001",
+    "intent": "enhance",
+    "selection": {
+      "text": "Democracy in America was written by Alexis de Tocqueville in 1835 after his travels through the United States.",
+      "start": 0,
+      "end": 107,
+      "chapterId": "chapter-1"
+    },
+    "enhanceType": "historical",
+    "weight": 0.15,
+    "expectedTokens": {
+      "input": 200,
+      "output": 150
+    },
+    "tags": ["enhancement", "historical", "complex"]
+  },
+  {
+    "name": "Knowledge Enhancement - Concept",
+    "description": "Conceptual explanation for technical terms",
+    "bookId": "test-book-001",
+    "intent": "enhance",
+    "selection": {
+      "text": "The concept of natural selection was revolutionary for its time, fundamentally changing how we understand evolution.",
+      "start": 0,
+      "end": 115,
+      "chapterId": "chapter-2"
+    },
+    "enhanceType": "concept",
+    "weight": 0.15,
+    "expectedTokens": {
+      "input": 180,
+      "output": 120
+    },
+    "tags": ["enhancement", "concept", "scientific"]
+  },
+  {
+    "name": "Translation - Chinese",
+    "description": "Text translation to Simplified Chinese",
+    "bookId": "test-book-001",
+    "intent": "translate",
+    "selection": {
+      "text": "Hello world, this is a test translation to measure performance and accuracy.",
+      "start": 0,
+      "end": 75
+    },
+    "targetLang": "zh-CN",
+    "weight": 0.15,
+    "expectedTokens": {
+      "input": 100,
+      "output": 60
+    },
+    "tags": ["translation", "chinese", "accuracy"]
+  },
+  {
+    "name": "Translation - Spanish",
+    "description": "Text translation to Spanish",
+    "bookId": "test-book-001",
+    "intent": "translate",
+    "selection": {
+      "text": "The quick brown fox jumps over the lazy dog. This pangram contains every letter of the alphabet.",
+      "start": 0,
+      "end": 95
+    },
+    "targetLang": "es",
+    "weight": 0.10,
+    "expectedTokens": {
+      "input": 110,
+      "output": 70
+    },
+    "tags": ["translation", "spanish", "pangram"]
+  },
+  {
+    "name": "Text Explanation",
+    "description": "Detailed explanation of complex passages",
+    "bookId": "test-book-001",
+    "intent": "explain",
+    "selection": {
+      "text": "It was the best of times, it was the worst of times, it was the age of wisdom, it was the age of foolishness.",
+      "start": 0,
+      "end": 109
+    },
+    "weight": 0.10,
+    "expectedTokens": {
+      "input": 140,
+      "output": 100
+    },
+    "tags": ["explanation", "literary", "classic"]
+  },
+  {
+    "name": "Literary Analysis",
+    "description": "In-depth literary analysis of text passages",
+    "bookId": "test-book-001",
+    "intent": "analyze",
+    "selection": {
+      "text": "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse.",
+      "start": 0,
+      "end": 100
+    },
+    "weight": 0.08,
+    "expectedTokens": {
+      "input": 160,
+      "output": 130
+    },
+    "tags": ["analysis", "literary", "famous-opening"]
+  },
+  {
+    "name": "Complex Query with Context",
+    "description": "Multi-part question requiring book context",
+    "bookId": "test-book-001",
+    "intent": "ask",
+    "query": "How does the author's use of symbolism in the first chapter relate to the overall themes developed throughout the book, and what literary techniques are employed?",
+    "weight": 0.07,
+    "expectedTokens": {
+      "input": 180,
+      "output": 160
+    },
+    "tags": ["complex", "analysis", "context"]
+  },
+  {
+    "name": "Knowledge Enhancement - Cultural",
+    "description": "Cultural context and references",
+    "bookId": "test-book-001",
+    "intent": "enhance",
+    "selection": {
+      "text": "The tea ceremony represents more than just the preparation of tea; it embodies Japanese aesthetic principles and philosophy.",
+      "start": 0,
+      "end": 125
+    },
+    "enhanceType": "cultural",
+    "weight": 0.05,
+    "expectedTokens": {
+      "input": 190,
+      "output": 140
+    },
+    "tags": ["enhancement", "cultural", "japanese"]
+  }
+]
