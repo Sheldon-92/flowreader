@@ -2,14 +2,14 @@ import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
-  const session = await locals.getSession();
-
-  if (!session) {
-    throw redirect(303, '/auth/login');
-  }
-
+  // No authentication required for personal use
   return {
-    session,
+    session: {
+      user: {
+        id: 'local-user',
+        email: 'personal@local.com'
+      }
+    },
     noteId: params.id
   };
 };

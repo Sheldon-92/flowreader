@@ -4,33 +4,16 @@ import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/publi
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, event, depends, cookies }) => {
-  depends('supabase:auth');
-
-  const supabase = createServerClient(
-    PUBLIC_SUPABASE_URL,
-    PUBLIC_SUPABASE_ANON_KEY,
-    {
-      cookies: {
-        get: (key) => cookies.get(key),
-        set: (key, value, options) => cookies.set(key, value, options),
-        remove: (key, options) => cookies.delete(key, options)
-      }
-    }
-  );
-
-  const {
-    data: { session }
-  } = await supabase.auth.getSession();
-
-  // Redirect to login if not authenticated
-  if (!session) {
-    throw redirect(303, '/auth/login');
-  }
-
+  // No authentication required for personal use
   const { bookId } = params;
 
   return {
-    session,
+    session: {
+      user: {
+        id: 'local-user',
+        email: 'personal@local.com'
+      }
+    },
     bookId
   };
 };
