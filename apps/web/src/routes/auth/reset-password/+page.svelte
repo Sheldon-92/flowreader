@@ -3,33 +3,38 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { supabase } from '$lib/supabase';
-  import type { PageData } from './$types';
 
-  export let data: PageData;
-  $: ({ session } = data);
-
-  let email = '';
   let password = '';
   let confirmPassword = '';
   let loading = false;
   let error = '';
-  let registrationComplete = false;
+  let success = false;
 
-  // Redirect if already authenticated
-  $: if (session) {
-    goto('/library');
-  }
+  onMount(async () => {
+    // Handle the password reset token from URL
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
 
-  async function handleSignUp() {
-    console.log('handleSignUp called');
+    if (accessToken && refreshToken) {
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken
+      });
 
-    if (!email || !password || !confirmPassword) {
-      error = 'Please fill in all fields';
-      return;
+      if (sessionError) {
+        console.error('Error setting session:', sessionError);
+        error = 'Invalid or expired reset link';
+        return;
+      }
+    } else {
+      error = 'Invalid reset link. Please request a new password reset.';
     }
+  });
 
-    if (!email.includes('@')) {
-      error = 'Please enter a valid email address';
+  async function handleUpdatePassword() {
+    if (!password || !confirmPassword) {
+      error = 'Please fill in all fields';
       return;
     }
 
@@ -46,52 +51,26 @@
     try {
       loading = true;
       error = '';
-      console.log('Attempting to sign up with Supabase...');
 
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            subscription_tier: 'trial'
-          },
-          emailRedirectTo: `${window.location.origin}/auth/confirm`
-        }
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: password
       });
 
-      console.log('Supabase response:', { authData, signUpError });
-
-      if (signUpError) {
-        // Handle specific error cases
-        if (signUpError.message.includes('fetch')) {
-          error = 'Network error. Please check your internet connection and try again.';
-        } else if (signUpError.message.includes('already registered')) {
-          error = 'This email is already registered. Please try signing in instead.';
-        } else if (signUpError.message.includes('invalid email')) {
-          error = 'Please enter a valid email address.';
-        } else {
-          error = signUpError.message;
-        }
-        console.error('Supabase signup error:', signUpError);
+      if (updateError) {
+        error = updateError.message;
         return;
       }
 
-      if (authData.user && !authData.session) {
-        // Email confirmation required
-        console.log('Registration complete, email confirmation required');
-        registrationComplete = true;
-      } else if (authData.session) {
-        // Auto-signed in (email confirmation disabled)
-        console.log('Auto-signed in, redirecting to library');
-        goto('/library');
-      } else {
-        console.log('Unexpected response state:', authData);
-        registrationComplete = true; // Show success message anyway
-      }
+      success = true;
+
+      // Redirect to login after 3 seconds
+      setTimeout(() => {
+        goto('/auth/login');
+      }, 3000);
 
     } catch (e) {
       error = 'An unexpected error occurred';
-      console.error('Sign up error:', e);
+      console.error('Update password error:', e);
     } finally {
       loading = false;
     }
@@ -99,7 +78,7 @@
 </script>
 
 <svelte:head>
-  <title>Sign Up - FlowReader</title>
+  <title>Reset Password - FlowReader</title>
 </svelte:head>
 
 <div class="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
@@ -112,29 +91,28 @@
         </div>
         <span class="text-2xl font-bold text-primary-900">FlowReader</span>
       </div>
-      <h2 class="text-3xl font-bold text-gray-900">Create your account</h2>
-      <p class="mt-2 text-gray-600">Start your AI-enhanced reading journey</p>
+      <h2 class="text-3xl font-bold text-gray-900">Set new password</h2>
+      <p class="mt-2 text-gray-600">Enter your new password below</p>
     </div>
 
-    {#if registrationComplete}
-      <!-- Registration Success -->
+    {#if success}
+      <!-- Success Message -->
       <div class="bg-white py-8 px-6 shadow-lg rounded-lg text-center">
         <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
           </svg>
         </div>
-        <h3 class="text-xl font-semibold text-gray-900 mb-2">Check your email</h3>
+        <h3 class="text-xl font-semibold text-gray-900 mb-2">Password updated!</h3>
         <p class="text-gray-600 mb-6">
-          We've sent a confirmation link to <strong>{email}</strong>.
-          Click the link in the email to activate your account.
+          Your password has been successfully updated. You'll be redirected to the login page in a few seconds.
         </p>
         <a href="/auth/login" class="btn btn-primary">
           Go to Sign In
         </a>
       </div>
     {:else}
-      <!-- Sign Up Form -->
+      <!-- Password Form -->
       <div class="bg-white py-8 px-6 shadow-lg rounded-lg">
         <div class="space-y-6">
           {#if error}
@@ -153,22 +131,8 @@
           {/if}
 
           <div>
-            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
-              Email address
-            </label>
-            <input
-              type="email"
-              id="email"
-              bind:value={email}
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div>
             <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
-              Password
+              New Password
             </label>
             <input
               type="password"
@@ -184,7 +148,7 @@
 
           <div>
             <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-2">
-              Confirm password
+              Confirm New Password
             </label>
             <input
               type="password"
@@ -192,40 +156,26 @@
               bind:value={confirmPassword}
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Re-enter your password"
+              placeholder="Re-enter your new password"
             />
-          </div>
-
-          <div class="text-xs text-gray-500">
-            By creating an account, you agree to our Terms of Service and Privacy Policy.
           </div>
 
           <button
             type="button"
-            on:click={handleSignUp}
+            on:click={handleUpdatePassword}
             disabled={loading}
             class="w-full btn btn-primary py-3 text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Creating account...' : 'Create Account'}
+            {loading ? 'Updating password...' : 'Update Password'}
           </button>
         </div>
       </div>
     {/if}
 
-    <!-- Sign In Link -->
+    <!-- Back to Login -->
     <div class="text-center">
-      <p class="text-gray-600">
-        Already have an account?
-        <a href="/auth/login" class="font-medium text-primary-600 hover:text-primary-500">
-          Sign in
-        </a>
-      </p>
-    </div>
-
-    <!-- Back to Home -->
-    <div class="text-center">
-      <a href="/" class="text-sm text-gray-500 hover:text-gray-700">
-        ← Back to home
+      <a href="/auth/login" class="text-sm text-gray-500 hover:text-gray-700">
+        ← Back to sign in
       </a>
     </div>
   </div>

@@ -63,7 +63,16 @@ export const actions: Actions = {
     });
 
     if (error) {
-      return fail(400, { error: error.message });
+      // Handle specific error cases
+      let errorMessage = error.message;
+      if (error.message.includes('Invalid login credentials')) {
+        errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+      } else if (error.message.includes('Email not confirmed')) {
+        errorMessage = 'Please check your email and click the confirmation link before signing in.';
+      } else if (error.message.includes('fetch')) {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      }
+      return fail(400, { error: errorMessage });
     }
 
     throw redirect(303, '/library');
