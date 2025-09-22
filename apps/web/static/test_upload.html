@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowReader Upload Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .status { margin: 20px 0; padding: 15px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        #bookList { margin-top: 20px; }
+        .book-item { padding: 10px; margin: 10px 0; background: #f8f9fa; border-radius: 5px; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FlowReader 上传功能测试</h1>
+
+    <div id="status"></div>
+
+    <h2>测试步骤：</h2>
+    <ol>
+        <li>
+            <button onclick="testLocalStorage()">测试 LocalStorage</button>
+            - 验证浏览器本地存储是否工作
+        </li>
+        <li>
+            <button onclick="testAPIEndpoint()">测试 API 端点</button>
+            - 验证 /api/books/upload 是否可访问
+        </li>
+        <li>
+            <input type="file" id="fileInput" accept=".epub" onchange="handleFileSelect(event)">
+            - 选择 EPUB 文件进行上传测试
+        </li>
+        <li>
+            <button onclick="showStoredBooks()">显示存储的书籍</button>
+            - 查看本地存储中的书籍
+        </li>
+        <li>
+            <button onclick="clearStorage()">清除本地存储</button>
+            - 清除测试数据
+        </li>
+    </ol>
+
+    <div id="bookList"></div>
+
+    <h2>测试结果：</h2>
+    <div id="results"></div>
+
+    <script>
+        function addStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            status.insertBefore(div, status.firstChild);
+        }
+
+        function addResult(label, value, success = true) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `status ${success ? 'success' : 'error'}`;
+            div.innerHTML = `<strong>${label}:</strong> ${value}`;
+            results.appendChild(div);
+        }
+
+        // 测试 LocalStorage
+        function testLocalStorage() {
+            try {
+                const testKey = 'flowreader_test';
+                const testValue = { timestamp: Date.now(), message: 'LocalStorage works!' };
+                localStorage.setItem(testKey, JSON.stringify(testValue));
+                const retrieved = JSON.parse(localStorage.getItem(testKey));
+
+                if (retrieved && retrieved.timestamp === testValue.timestamp) {
+                    addStatus('✅ LocalStorage 测试通过', 'success');
+                    addResult('LocalStorage', 'Working', true);
+                } else {
+                    throw new Error('Data mismatch');
+                }
+
+                localStorage.removeItem(testKey);
+            } catch (error) {
+                addStatus(`❌ LocalStorage 测试失败: ${error.message}`, 'error');
+                addResult('LocalStorage', error.message, false);
+            }
+        }
+
+        // 测试 API 端点
+        async function testAPIEndpoint() {
+            try {
+                addStatus('正在测试 API 端点...', 'info');
+
+                // 获取 session
+                const response = await fetch('/api/books/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+
+                if (response.status === 400) {
+                    addStatus('✅ API 端点响应正常（返回 400 - 缺少必需字段）', 'success');
+                    addResult('API Endpoint', 'Accessible', true);
+                } else {
+                    addStatus(`⚠️ API 端点返回状态码: ${response.status}`, 'warning');
+                    addResult('API Endpoint', `Status ${response.status}`, false);
+                }
+            } catch (error) {
+                addStatus(`❌ API 端点测试失败: ${error.message}`, 'error');
+                addResult('API Endpoint', error.message, false);
+            }
+        }
+
+        // 处理文件选择
+        async function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            addStatus(`选择了文件: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, 'info');
+
+            try {
+                // 读取文件
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    const arrayBuffer = e.target.result;
+                    const uint8Array = new Uint8Array(arrayBuffer);
+
+                    // 转换为 base64
+                    let binary = '';
+                    for (let i = 0; i < uint8Array.length; i++) {
+                        binary += String.fromCharCode(uint8Array[i]);
+                    }
+                    const base64Data = btoa(binary);
+
+                    addStatus('文件已转换为 Base64', 'info');
+
+                    // 模拟用户ID（实际应该从认证系统获取）
+                    const userId = localStorage.getItem('userId') || 'test-user-' + Date.now();
+                    localStorage.setItem('userId', userId);
+
+                    // 发送到服务器
+                    addStatus('正在上传到服务器...', 'info');
+
+                    const response = await fetch('/api/books/upload', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            fileName: file.name,
+                            fileSize: file.size,
+                            fileData: base64Data,
+                            userId: userId
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
+                        addStatus(`✅ 上传成功！书籍ID: ${result.book?.id}`, 'success');
+
+                        // 如果服务器指示使用本地存储
+                        if (result.useLocalStorage) {
+                            addStatus('📌 使用本地存储保存书籍', 'warning');
+                            const books = JSON.parse(localStorage.getItem('flowreader_local_books') || '[]');
+                            books.push(result.book);
+                            localStorage.setItem('flowreader_local_books', JSON.stringify(books));
+                        }
+
+                        addResult('Upload', `Success - ${result.book?.title || file.name}`, true);
+
+                        // 显示返回的数据
+                        const details = document.createElement('pre');
+                        details.textContent = JSON.stringify(result, null, 2);
+                        document.getElementById('results').appendChild(details);
+
+                    } else {
+                        addStatus(`❌ 上传失败: ${result.error || 'Unknown error'}`, 'error');
+                        addResult('Upload', result.error || 'Failed', false);
+
+                        if (result.details) {
+                            addStatus(`详细信息: ${result.details}`, 'error');
+                        }
+                    }
+                };
+
+                reader.readAsArrayBuffer(file);
+
+            } catch (error) {
+                addStatus(`❌ 文件处理失败: ${error.message}`, 'error');
+                addResult('File Processing', error.message, false);
+            }
+        }
+
+        // 显示存储的书籍
+        function showStoredBooks() {
+            try {
+                const books = JSON.parse(localStorage.getItem('flowreader_local_books') || '[]');
+                const bookList = document.getElementById('bookList');
+
+                if (books.length === 0) {
+                    bookList.innerHTML = '<div class="status info">没有找到存储的书籍</div>';
+                } else {
+                    bookList.innerHTML = '<h3>存储的书籍：</h3>';
+                    books.forEach(book => {
+                        const div = document.createElement('div');
+                        div.className = 'book-item';
+                        div.innerHTML = `
+                            <strong>${book.title}</strong> - ${book.author || 'Unknown Author'}<br>
+                            <small>ID: ${book.id} | 上传时间: ${book.upload_date || 'Unknown'}</small>
+                        `;
+                        bookList.appendChild(div);
+                    });
+                }
+
+                addStatus(`找到 ${books.length} 本书籍`, 'info');
+            } catch (error) {
+                addStatus(`❌ 读取书籍失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 清除存储
+        function clearStorage() {
+            if (confirm('确定要清除所有测试数据吗？')) {
+                localStorage.removeItem('flowreader_local_books');
+                localStorage.removeItem('flowreader_books'); // 也清除旧的key
+                localStorage.removeItem('userId');
+                addStatus('✅ 本地存储已清除', 'success');
+                document.getElementById('bookList').innerHTML = '';
+            }
+        }
+
+        // 页面加载时自动运行基础测试
+        window.onload = function() {
+            addStatus('FlowReader 上传测试页面已加载', 'info');
+            testLocalStorage();
+        };
+    </script>
+</body>
+</html>

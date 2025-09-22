@@ -1,48 +1,16 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { enhance } from '$app/forms';
   import type { PageData } from './$types';
+  import type { ActionData } from './$types';
 
   export let data: PageData;
-  $: ({ supabase, session } = data);
+  export let form: ActionData;
+
+  $: ({ session } = data);
 
   let email = '';
   let password = '';
   let loading = false;
-  let error = '';
-
-  // Redirect if already authenticated
-  $: if (session) {
-    goto('/library');
-  }
-
-  async function handleSignIn() {
-    if (!email || !password) return;
-
-    try {
-      loading = true;
-      error = '';
-
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (signInError) {
-        error = signInError.message;
-        return;
-      }
-
-      // Redirect will happen automatically via the reactive statement above
-
-    } catch (e) {
-      error = 'An unexpected error occurred';
-      console.error('Sign in error:', e);
-    } finally {
-      loading = false;
-    }
-  }
 </script>
 
 <svelte:head>
@@ -65,8 +33,14 @@
 
     <!-- Sign In Form -->
     <div class="bg-white py-8 px-6 shadow-lg rounded-lg">
-      <form on:submit|preventDefault={handleSignIn} class="space-y-6">
-        {#if error}
+      <form method="POST" use:enhance={() => {
+        loading = true;
+        return async ({ update }) => {
+          loading = false;
+          await update();
+        };
+      }} class="space-y-6">
+        {#if form?.error}
           <div class="bg-red-50 border border-red-200 rounded-lg p-4">
             <div class="flex">
               <div class="flex-shrink-0">
@@ -75,7 +49,7 @@
                 </svg>
               </div>
               <div class="ml-3">
-                <p class="text-sm text-red-800">{error}</p>
+                <p class="text-sm text-red-800">{form.error}</p>
               </div>
             </div>
           </div>
@@ -87,6 +61,7 @@
           </label>
           <input
             type="email"
+            name="email"
             id="email"
             bind:value={email}
             required
@@ -101,6 +76,7 @@
           </label>
           <input
             type="password"
+            name="password"
             id="password"
             bind:value={password}
             required
@@ -111,7 +87,7 @@
 
         <button
           type="submit"
-          disabled={loading || !email || !password}
+          disabled={loading}
           class="w-full btn btn-primary py-3 text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Signing in...' : 'Sign In'}

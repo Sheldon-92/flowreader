@@ -1,0 +1,13 @@
+{
+  "taskId": "task_12345678-abcd-1234-5678-1234567890ab",
+  "status": "completed",
+  "progress": 100,
+  "result": {
+    "bookId": "book_87654321-dcba-4321-8765-4321567890ba",
+    "title": "Test Book",
+    "author": "Test Author",
+    "chapters": 12,
+    "totalPages": 234,
+    "processedAt": "2025-09-19T21:25:30.000Z"
+  }
+}

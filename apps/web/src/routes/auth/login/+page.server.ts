@@ -1,16 +1,22 @@
-import { createSupabaseServerClient } from '@supabase/auth-helpers-sveltekit';
-import { redirect } from '@sveltejs/kit';
+import { createServerClient } from '@supabase/ssr';
+import { redirect, fail } from '@sveltejs/kit';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
-import type { PageServerLoad } from './$types';
+import type { PageServerLoad, Actions } from './$types';
 
-export const load: PageServerLoad = async ({ event, depends }) => {
+export const load: PageServerLoad = async ({ event, depends, cookies }) => {
   depends('supabase:auth');
 
-  const supabase = createSupabaseServerClient({
-    supabaseUrl: PUBLIC_SUPABASE_URL,
-    supabaseKey: PUBLIC_SUPABASE_ANON_KEY,
-    event
-  });
+  const supabase = createServerClient(
+    PUBLIC_SUPABASE_URL,
+    PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        get: (key) => cookies.get(key),
+        set: (key, value, options) => cookies.set(key, value, options),
+        remove: (key, options) => cookies.delete(key, options)
+      }
+    }
+  );
 
   const {
     data: { session }
@@ -22,7 +28,44 @@ export const load: PageServerLoad = async ({ event, depends }) => {
   }
 
   return {
-    supabase,
     session
   };
+};
+
+export const actions: Actions = {
+  default: async ({ request, cookies }) => {
+    const formData = await request.formData();
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    if (!email || !password) {
+      return fail(400, { error: 'Email and password are required' });
+    }
+
+    const supabase = createServerClient(
+      PUBLIC_SUPABASE_URL,
+      PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          get: (key) => cookies.get(key),
+          set: (key, value, options) => cookies.set(key, value, {
+            ...options,
+            path: '/'
+          }),
+          remove: (key, options) => cookies.delete(key, { ...options, path: '/' })
+        }
+      }
+    );
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      return fail(400, { error: error.message });
+    }
+
+    throw redirect(303, '/library');
+  }
 };

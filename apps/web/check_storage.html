@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check LocalStorage</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+        .book-item { background: #e3f2fd; margin: 10px 0; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>LocalStorage 检查</h1>
+    <div id="output"></div>
+    <script>
+        const output = document.getElementById('output');
+
+        // 检查新的 key: flowreader_local_books
+        const localBooks = localStorage.getItem('flowreader_local_books');
+        if (localBooks) {
+            const booksArray = JSON.parse(localBooks);
+            output.innerHTML += '<h2>✅ flowreader_local_books: 找到 ' + booksArray.length + ' 本书</h2>';
+            booksArray.forEach((book, index) => {
+                output.innerHTML += '<div class="book-item">';
+                output.innerHTML += '<strong>Book ' + (index + 1) + ':</strong><br>';
+                output.innerHTML += 'ID: ' + book.id + '<br>';
+                output.innerHTML += 'Title: ' + book.title + '<br>';
+                output.innerHTML += 'Author: ' + (book.author || 'Unknown') + '<br>';
+                output.innerHTML += '</div>';
+            });
+            output.innerHTML += '<h3>Raw Data:</h3><pre>' + JSON.stringify(booksArray, null, 2) + '</pre>';
+        } else {
+            output.innerHTML += '<p>❌ flowreader_local_books: No books found</p>';
+        }
+
+        // 检查旧的 key: flowreader_books
+        const oldBooks = localStorage.getItem('flowreader_books');
+        if (oldBooks) {
+            const oldBooksArray = JSON.parse(oldBooks);
+            output.innerHTML += '<h2>⚠️ flowreader_books (旧key): 找到 ' + oldBooksArray.length + ' 本书</h2>';
+            output.innerHTML += '<p style="color: orange;">请访问 <a href="/migrate_storage.html">/migrate_storage.html</a> 进行数据迁移</p>';
+        }
+        
+        // 检查所有 localStorage keys
+        output.innerHTML += '<h2>All LocalStorage Keys:</h2><ul>';
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            output.innerHTML += '<li>' + key + '</li>';
+        }
+        output.innerHTML += '</ul>';
+    </script>
+</body>
+</html>

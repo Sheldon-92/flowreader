@@ -2,10 +2,11 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
+  import { supabase } from '$lib/supabase';
   import type { PageData } from './$types';
 
   export let data: PageData;
-  $: ({ supabase, session } = data);
+  $: ({ session } = data);
 
   let email = '';
   let password = '';
@@ -20,7 +21,17 @@
   }
 
   async function handleSignUp() {
-    if (!email || !password || !confirmPassword) return;
+    console.log('handleSignUp called');
+
+    if (!email || !password || !confirmPassword) {
+      error = 'Please fill in all fields';
+      return;
+    }
+
+    if (!email.includes('@')) {
+      error = 'Please enter a valid email address';
+      return;
+    }
 
     if (password !== confirmPassword) {
       error = 'Passwords do not match';
@@ -35,6 +46,7 @@
     try {
       loading = true;
       error = '';
+      console.log('Attempting to sign up with Supabase...');
 
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
@@ -46,17 +58,25 @@
         }
       });
 
+      console.log('Supabase response:', { authData, signUpError });
+
       if (signUpError) {
         error = signUpError.message;
+        console.error('Supabase signup error:', signUpError);
         return;
       }
 
       if (authData.user && !authData.session) {
         // Email confirmation required
+        console.log('Registration complete, email confirmation required');
         registrationComplete = true;
       } else if (authData.session) {
         // Auto-signed in (email confirmation disabled)
+        console.log('Auto-signed in, redirecting to library');
         goto('/library');
+      } else {
+        console.log('Unexpected response state:', authData);
+        registrationComplete = true; // Show success message anyway
       }
 
     } catch (e) {
@@ -96,7 +116,7 @@
         </div>
         <h3 class="text-xl font-semibold text-gray-900 mb-2">Check your email</h3>
         <p class="text-gray-600 mb-6">
-          We've sent a confirmation link to <strong>{email}</strong>. 
+          We've sent a confirmation link to <strong>{email}</strong>.
           Click the link in the email to activate your account.
         </p>
         <a href="/auth/login" class="btn btn-primary">
@@ -106,7 +126,7 @@
     {:else}
       <!-- Sign Up Form -->
       <div class="bg-white py-8 px-6 shadow-lg rounded-lg">
-        <form on:submit|preventDefault={handleSignUp} class="space-y-6">
+        <div class="space-y-6">
           {#if error}
             <div class="bg-red-50 border border-red-200 rounded-lg p-4">
               <div class="flex">
@@ -147,7 +167,7 @@
               required
               minlength="8"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              placeholder="••••••••"
+              placeholder="At least 8 characters"
             />
             <p class="text-xs text-gray-500 mt-1">Must be at least 8 characters long</p>
           </div>
@@ -162,7 +182,7 @@
               bind:value={confirmPassword}
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              placeholder="••••••••"
+              placeholder="Re-enter your password"
             />
           </div>
 
@@ -171,13 +191,14 @@
           </div>
 
           <button
-            type="submit"
-            disabled={loading || !email || !password || !confirmPassword}
+            type="button"
+            on:click={handleSignUp}
+            disabled={loading}
             class="w-full btn btn-primary py-3 text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Creating account...' : 'Create Account'}
           </button>
-        </form>
+        </div>
       </div>
     {/if}
 

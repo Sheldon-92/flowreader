@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>迁移 LocalStorage 数据</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>LocalStorage 数据迁移</h1>
+    <div id="output"></div>
+
+    <script>
+        const output = document.getElementById('output');
+
+        function addMessage(msg, className = 'info') {
+            const div = document.createElement('div');
+            div.className = `status ${className}`;
+            div.textContent = msg;
+            output.appendChild(div);
+        }
+
+        // 检查并迁移数据
+        const oldKey = 'flowreader_books';
+        const newKey = 'flowreader_local_books';
+
+        const oldData = localStorage.getItem(oldKey);
+        const newData = localStorage.getItem(newKey);
+
+        if (oldData) {
+            const oldBooks = JSON.parse(oldData);
+            addMessage(`找到旧数据 (${oldKey}): ${oldBooks.length} 本书`, 'warning');
+
+            if (newData) {
+                const newBooks = JSON.parse(newData);
+                addMessage(`已有新数据 (${newKey}): ${newBooks.length} 本书`, 'info');
+
+                // 合并数据
+                const mergedBooks = [...newBooks];
+                const existingIds = new Set(newBooks.map(b => b.id));
+
+                oldBooks.forEach(book => {
+                    if (!existingIds.has(book.id)) {
+                        mergedBooks.push(book);
+                        addMessage(`迁移书籍: ${book.title}`, 'success');
+                    }
+                });
+
+                localStorage.setItem(newKey, JSON.stringify(mergedBooks));
+                addMessage(`✅ 数据合并完成，共 ${mergedBooks.length} 本书`, 'success');
+            } else {
+                // 直接迁移
+                localStorage.setItem(newKey, oldData);
+                addMessage(`✅ 数据迁移完成，共 ${oldBooks.length} 本书`, 'success');
+            }
+
+            // 可选：删除旧数据
+            // localStorage.removeItem(oldKey);
+            // addMessage('已删除旧数据', 'info');
+        } else {
+            addMessage('没有找到需要迁移的旧数据', 'info');
+        }
+
+        // 显示当前存储的所有书籍
+        const currentBooks = JSON.parse(localStorage.getItem(newKey) || '[]');
+        if (currentBooks.length > 0) {
+            addMessage(`\n当前图书馆中的书籍 (${newKey}):`, 'info');
+            currentBooks.forEach((book, index) => {
+                addMessage(`${index + 1}. ${book.title} (ID: ${book.id})`, 'info');
+            });
+        }
+    </script>
+</body>
+</html>

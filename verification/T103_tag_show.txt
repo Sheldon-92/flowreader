@@ -1,0 +1,11 @@
+tag v0.9-personal-ready
+Tagger: Sheldon Zhao <sheldonzhao@SheldondeMacBook-Air.local>
+Date:   Fri Sep 19 20:12:17 2025 -0400
+
+Personal Use Ready; Expansion Paused
+
+commit 3230e3d85b0d31d922d34c2a38dfcdfa752822fa
+Author: Sheldon Zhao <sheldonzhao@SheldondeMacBook-Air.local>
+Date:   Fri Sep 19 20:12:17 2025 -0400
+
+    Initial commit: FlowReader v0.9 - Personal Use Ready

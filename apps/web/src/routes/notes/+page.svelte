@@ -281,15 +281,15 @@
               </Badge>
 
               {#if note.source === 'auto' && note.meta}
-                {@const autoMeta = note.meta as AutoNoteMeta}
-                {#if autoMeta.type}
-                  <Badge class={getTypeColor(autoMeta.type)}>
-                    {autoMeta.type}
+                
+                {#if note.meta.type}
+                  <Badge class={getTypeColor(note.meta.type)}>
+                    {note.meta.type}
                   </Badge>
                 {/if}
-                {#if autoMeta.confidence !== undefined}
-                  <Badge class={getConfidenceColor(autoMeta.confidence)}>
-                    {Math.round(autoMeta.confidence * 100)}% confidence
+                {#if note.meta.confidence !== undefined}
+                  <Badge class={getConfidenceColor(note.meta.confidence)}>
+                    {Math.round(note.meta.confidence * 100)}% confidence
                   </Badge>
                 {/if}
               {/if}
@@ -313,9 +313,9 @@
           <div class="flex items-center justify-between text-xs text-gray-500">
             <span>{note.content.length} characters</span>
             {#if note.source === 'auto' && note.meta}
-              {@const autoMeta = note.meta as AutoNoteMeta}
-              {#if autoMeta.generationMethod}
-                <span>{autoMeta.generationMethod.replace('_', ' ')}</span>
+              
+              {#if note.meta.generationMethod}
+                <span>{note.meta.generationMethod.replace('_', ' ')}</span>
               {/if}
             {/if}
           </div>

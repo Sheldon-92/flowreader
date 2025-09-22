@@ -1,7 +1,8 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import type { SupabaseClient } from '@supabase/supabase-js';
-  
+  import { localBooks } from '$lib/stores/localBooks';
+
   export let supabase: SupabaseClient;
   export let userId: string;
 
@@ -15,6 +16,8 @@
   let uploadProgress = 0;
   let uploadStatus = '';
   let selectedFile: File | null = null;
+  let errorMessage = '';
+  let showSuccess = false;
 
   function handleDragOver(e: DragEvent) {
     e.preventDefault();
@@ -55,9 +58,16 @@
       uploadProgress = 10;
       uploadStatus = 'Preparing upload...';
 
-      // Read file as buffer
+      // Read file as base64
       const fileBuffer = await selectedFile.arrayBuffer();
       const uint8Array = new Uint8Array(fileBuffer);
+
+      // Convert to base64 for transmission
+      let binary = '';
+      for (let i = 0; i < uint8Array.length; i++) {
+        binary += String.fromCharCode(uint8Array[i]);
+      }
+      const base64Data = btoa(binary);
 
       uploadProgress = 30;
       uploadStatus = 'Uploading to server...';
@@ -71,7 +81,7 @@
         body: JSON.stringify({
           fileName: selectedFile.name,
           fileSize: selectedFile.size,
-          fileData: Array.from(uint8Array), // Convert to regular array for JSON
+          fileData: base64Data, // Send as base64 string
           userId: userId
         })
       });
@@ -79,27 +89,46 @@
       uploadProgress = 60;
       uploadStatus = 'Processing EPUB...';
 
+      const result = await response.json();
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Upload failed');
+        throw new Error(result.error || result.message || 'Upload failed');
       }
 
-      const result = await response.json();
-      
-      if (result.taskId) {
-        // Poll for completion
-        await pollTaskStatus(result.taskId);
-      } else {
-        // Immediate completion
-        uploadProgress = 100;
-        uploadStatus = 'Upload complete!';
-        setTimeout(() => dispatch('complete'), 1000);
+      // Check for warnings even on success
+      if (result.warning) {
+        console.warn('Upload warning:', result.warning);
       }
+
+      // If database save failed, save to local storage
+      if (result.useLocalStorage && result.book) {
+        console.log('Saving book to local storage');
+        localBooks.addBook(result.book);
+      }
+
+      // Upload successful
+      uploadProgress = 100;
+      uploadStatus = result.message || 'Upload complete!';
+      showSuccess = true;
+      errorMessage = '';
+
+      // Show success for longer if there's a warning
+      const delay = result.warning ? 2500 : 1500;
+
+      setTimeout(() => {
+        dispatch('complete');
+        reset(); // Reset the component
+      }, delay);
 
     } catch (error) {
       console.error('Upload failed:', error);
-      uploadStatus = `Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      uploadStatus = 'Upload failed';
+      uploadProgress = 0;
       uploading = false;
+      showSuccess = false;
+
+      // Don't auto-reset on error - let user decide
     }
   }
 
@@ -157,6 +186,8 @@
     uploading = false;
     uploadProgress = 0;
     uploadStatus = '';
+    errorMessage = '';
+    showSuccess = false;
   }
 </script>
 
@@ -253,27 +284,70 @@
       {:else}
         <!-- Upload Progress -->
         <div class="text-center">
-          <div class="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <div class="loading-spinner w-8 h-8"></div>
-          </div>
-          
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">Processing Book</h3>
-          <p class="text-gray-600 mb-6">{uploadStatus}</p>
-          
-          <!-- Progress Bar -->
-          <div class="w-full bg-gray-200 rounded-full h-2 mb-4">
-            <div
-              class="bg-primary-600 h-2 rounded-full transition-all duration-300"
-              style="width: {uploadProgress}%"
-            ></div>
-          </div>
-          
-          <p class="text-sm text-gray-500">{uploadProgress}% complete</p>
-          
-          {#if uploadProgress < 100}
-            <p class="text-xs text-gray-400 mt-2">
-              This may take a few minutes for large books...
-            </p>
+          {#if !errorMessage}
+            <div class="w-16 h-16 {showSuccess ? 'bg-green-100' : 'bg-primary-100'} rounded-full flex items-center justify-center mx-auto mb-4">
+              {#if showSuccess}
+                <!-- Success checkmark -->
+                <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              {:else}
+                <div class="loading-spinner w-8 h-8"></div>
+              {/if}
+            </div>
+          {:else}
+            <!-- Error icon -->
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+          {/if}
+
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">
+            {#if showSuccess}
+              Upload Successful
+            {:else if errorMessage}
+              Upload Failed
+            {:else}
+              Processing Book
+            {/if}
+          </h3>
+
+          {#if errorMessage}
+            <p class="text-red-600 mb-6">{errorMessage}</p>
+            <div class="flex space-x-3 justify-center">
+              <button
+                on:click={uploadBook}
+                class="btn btn-primary"
+              >
+                Try Again
+              </button>
+              <button
+                on:click={reset}
+                class="btn btn-secondary"
+              >
+                Choose Different File
+              </button>
+            </div>
+          {:else}
+            <p class="text-gray-600 mb-6">{uploadStatus}</p>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-200 rounded-full h-2 mb-4">
+              <div
+                class="{showSuccess ? 'bg-green-600' : 'bg-primary-600'} h-2 rounded-full transition-all duration-300"
+                style="width: {uploadProgress}%"
+              ></div>
+            </div>
+
+            <p class="text-sm text-gray-500">{uploadProgress}% complete</p>
+
+            {#if uploadProgress < 100}
+              <p class="text-xs text-gray-400 mt-2">
+                This may take a few moments...
+              </p>
+            {/if}
           {/if}
         </div>
       {/if}

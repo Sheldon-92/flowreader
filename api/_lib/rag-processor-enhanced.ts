@@ -97,7 +97,7 @@ export class EnhancedRAGProcessor {
 
       // Process each chapter
       for (const chapter of chapters) {
-        const chunks = this.chunker.chunkText(chapter.text, chapter.idx);
+        const chunks = this.chunker.chunkText(chapter.content, chapter.idx);
 
         chunks.forEach(chunk => {
           allChunks.push({
@@ -108,7 +108,7 @@ export class EnhancedRAGProcessor {
         });
 
         totalChunks += chunks.length;
-        totalTextLength += chapter.text.length;
+        totalTextLength += chapter.content.length;
       }
 
       console.log(`📝 Created ${totalChunks} chunks from ${chapters.length} chapters`);

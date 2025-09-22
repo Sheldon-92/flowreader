@@ -1,0 +1,13 @@
+{
+  "id": "note_manual_xyz789",
+  "bookId": "book_87654321-dcba-4321-8765-4321567890ba",
+  "content": "This is a test note",
+  "type": "highlight",
+  "source": "manual",
+  "position": {
+    "chapterId": "chapter-1",
+    "percentage": 10
+  },
+  "createdAt": "2025-09-19T21:35:00.000Z",
+  "userId": "user_98765432-fedc-4321-8765-0987654321ba"
+}

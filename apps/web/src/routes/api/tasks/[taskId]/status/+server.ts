@@ -1,21 +1,27 @@
 import { json } from '@sveltejs/kit';
-import { createSupabaseServerClient } from '@supabase/auth-helpers-sveltekit';
+import { createServerClient } from '@supabase/ssr';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 import type { RequestHandler } from './$types';
 
 // Import from API layer
 const API_BASE_URL = process.env.APP_URL || 'http://localhost:3000';
 
-export const GET: RequestHandler = async ({ params, event, fetch }) => {
+export const GET: RequestHandler = async ({ params, event, fetch, cookies }) => {
   try {
     const { taskId } = params;
 
     // Authenticate user
-    const supabase = createSupabaseServerClient({
-      supabaseUrl: PUBLIC_SUPABASE_URL,
-      supabaseKey: PUBLIC_SUPABASE_ANON_KEY,
-      event
-    });
+    const supabase = createServerClient(
+      PUBLIC_SUPABASE_URL,
+      PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          get: (key) => cookies.get(key),
+          set: (key, value, options) => cookies.set(key, value, options),
+          remove: (key, options) => cookies.delete(key, options)
+        }
+      }
+    );
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {

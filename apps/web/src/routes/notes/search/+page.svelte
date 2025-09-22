@@ -4,6 +4,7 @@
   import { page } from '$app/stores';
   import { browser } from '$app/environment';
   import type { PageData } from './$types';
+  import { supabase } from '$lib/supabase';
   import type { Note } from '@flowreader/shared';
   import Card from '$lib/components/ui/Card.svelte';
   import Button from '$lib/components/ui/Button.svelte';
@@ -12,7 +13,7 @@
   import Input from '$lib/components/ui/Input.svelte';
 
   export let data: PageData;
-  $: ({ supabase, session, searchParams } = data);
+  $: ({ session, searchParams } = data);
 
   // Search state
   let searchQuery = searchParams.q || '';

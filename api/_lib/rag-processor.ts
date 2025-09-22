@@ -77,7 +77,7 @@ export class RAGProcessor {
       // Get all chapters for the book
       const { data: chapters, error } = await supabaseAdmin
         .from('chapters')
-        .select('id, idx, text')
+        .select('id, idx, content')
         .eq('book_id', bookId)
         .order('idx');
 
@@ -92,7 +92,7 @@ export class RAGProcessor {
 
       // Process each chapter
       for (const chapter of chapters) {
-        const chunks = this.chunker.chunkText(chapter.text, chapter.idx);
+        const chunks = this.chunker.chunkText(chapter.content, chapter.idx);
         
         chunks.forEach(chunk => {
           allChunks.push({
@@ -103,7 +103,7 @@ export class RAGProcessor {
         });
 
         totalChunks += chunks.length;
-        totalTextLength += chapter.text.length;
+        totalTextLength += chapter.content.length;
       }
 
       console.log(`📝 Created ${totalChunks} chunks from ${chapters.length} chapters`);

@@ -7,7 +7,7 @@
  */
 
 import OpenAI from 'openai';
-import { supabaseAdminAdmin } from './auth.js';
+import { supabaseAdmin } from './auth.js';
 import { RAGProcessor } from './rag-processor.js';
 
 // Cache key interfaces for segmented storage
@@ -216,9 +216,9 @@ export class KnowledgePrecomputeService {
     chapterLimit?: number
   ): Promise<ChapterConcepts[]> {
     // Get chapters for the book
-    const { data: chapters, error } = await supabaseAdminAdmin
+    const { data: chapters, error } = await supabaseAdmin
       .from('chapters')
-      .select('id, idx, text, title')
+      .select('id, idx, content, title')
       .eq('book_id', bookId)
       .order('idx')
       .limit(chapterLimit || 50);
@@ -231,7 +231,7 @@ export class KnowledgePrecomputeService {
 
     for (const chapter of chapters) {
       const concepts = await this.extractConceptsFromText(
-        chapter.text,
+        chapter.content,
         chapter.title || `Chapter ${chapter.idx + 1}`
       );
 
@@ -608,7 +608,7 @@ Provide clear, precise definitions of the important terms or concepts, focusing 
     try {
       const cacheKey = this.buildCacheKey(key);
 
-      const { data, error } = await supabaseAdminAdmin
+      const { data, error } = await supabaseAdmin
         .from('knowledge_cache')
         .select('content')
         .eq('cache_key', cacheKey)
@@ -627,7 +627,7 @@ Provide clear, precise definitions of the important terms or concepts, focusing 
     try {
       const cacheKey = this.buildCacheKey(key);
 
-      await supabaseAdminAdmin
+      await supabaseAdmin
         .from('knowledge_cache')
         .upsert({
           cache_key: cacheKey,
@@ -651,7 +651,7 @@ Provide clear, precise definitions of the important terms or concepts, focusing 
   ): Promise<PrecomputedContent | null> {
     // Simple similarity search - could be enhanced with vector similarity
     try {
-      const { data, error } = await supabaseAdminAdmin
+      const { data, error } = await supabaseAdmin
         .from('knowledge_cache')
         .select('content, cache_key')
         .eq('book_id', bookId)
@@ -819,7 +819,7 @@ Provide clear, precise definitions of the important terms or concepts, focusing 
   }
 
   private async verifyBookAccess(bookId: string, userId: string): Promise<void> {
-    const { data: book, error } = await supabaseAdminAdmin
+    const { data: book, error } = await supabaseAdmin
       .from('books')
       .select('id, owner_id')
       .eq('id', bookId)

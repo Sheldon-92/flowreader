@@ -128,7 +128,7 @@ export class EPUBProcessor {
         book_id: bookId,
         idx: chapter.order,
         title: chapter.title,
-        text: chapter.content,
+        content: chapter.content,
         word_count: this.countWords(chapter.content)
       }));
 

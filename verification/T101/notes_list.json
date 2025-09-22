@@ -1,0 +1,34 @@
+{
+  "items": [
+    {
+      "id": "note_manual_xyz789",
+      "bookId": "book_87654321-dcba-4321-8765-4321567890ba",
+      "content": "This is a test note",
+      "type": "highlight",
+      "source": "manual",
+      "position": {
+        "chapterId": "chapter-1",
+        "percentage": 10
+      },
+      "createdAt": "2025-09-19T21:35:00.000Z"
+    },
+    {
+      "id": "note_auto_def456",
+      "bookId": "book_87654321-dcba-4321-8765-4321567890ba",
+      "content": "AI-generated summary: This passage discusses the fundamental principles of human-computer interaction...",
+      "type": "summary",
+      "source": "auto",
+      "selection": {
+        "text": "Important passage",
+        "chapterId": "chapter-1"
+      },
+      "generatedAt": "2025-09-19T21:36:00.000Z"
+    }
+  ],
+  "total": 2,
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "hasMore": false
+  }
+}

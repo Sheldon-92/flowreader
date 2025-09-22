@@ -2,7 +2,7 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import { RAGProcessor } from '../_lib/rag-processor.js';
 import { requireAuthWithSecurity, convertVercelRequest, enhancedAuth } from '../_lib/auth-enhanced.js';
 import { chatRateLimiter } from '../_lib/rate-limiter.js';
-import { supabaseAdminAdmin } from '../_lib/auth.js';
+import { supabaseAdmin } from '../_lib/auth.js';
 import { knowledgePrecomputeService } from '../_lib/knowledge-precompute.js';
 import OpenAI from 'openai';
 
@@ -967,7 +967,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Verify book access
-    const { data: book, error: bookError } = await supabaseAdminAdmin
+    const { data: book, error: bookError } = await supabaseAdmin
       .from('books')
       .select('*')
       .eq('id', bookId)

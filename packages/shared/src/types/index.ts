@@ -25,7 +25,7 @@ export interface UserPreferences {
 // Book and Content Types
 export interface Book {
   id: string;
-  user_id: string;
+  owner_id: string;
   title: string;
   author: string;
   file_path: string;
@@ -56,7 +56,7 @@ export interface Chapter {
   book_id: string;
   idx: number;
   title: string;
-  text: string;
+  content: string;
   word_count: number;
   created_at: string;
 }

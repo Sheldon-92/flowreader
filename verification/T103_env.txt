@@ -1,0 +1,6 @@
+DATE=2025-09-19T22:53:30-04:00
+OWNER_REPO=Sheldon-92/flowreader
+TAG=v0.9-personal-ready
+TITLE=v0.9 Personal Use Ready
+RELEASE_NOTES_BYTES=4658
+GH_CLI_VERSION=gh version 2.79.0 (2025-09-08)

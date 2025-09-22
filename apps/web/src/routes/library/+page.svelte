@@ -10,10 +10,12 @@
   import RecentlyRead from '$lib/components/RecentlyRead.svelte';
   import QuickActions from '$lib/components/QuickActions.svelte';
   import type { PageData } from './$types';
+  import { supabase } from '$lib/supabase';
   import type { Book } from '@flowreader/shared';
+  import { localBooks } from '$lib/stores/localBooks';
 
   export let data: PageData;
-  $: ({ supabase, session } = data);
+  $: ({ session } = data);
 
   let books: Book[] = [];
   let filteredBooks: Book[] = [];
@@ -24,6 +26,8 @@
   let viewMode: 'grid' | 'list' = 'grid';
   let selectedGenre = 'all';
   let showFilters = false;
+  let loadError = '';
+  let isFirstLoad = true;
 
   // Redirect if not authenticated
   $: if (!session) {
@@ -39,29 +43,86 @@
   async function loadBooks() {
     try {
       loading = true;
+      loadError = '';
+
+      // Try to load from Supabase first
       const { data: booksData, error } = await supabase
         .from('books')
         .select('*')
-        .eq('owner_id', session?.user.id)
-        .order('upload_date', { ascending: false });
+        .eq('user_id', session?.user.id)
+        .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error loading books:', error);
-        return;
+        console.error('Error loading books from database:', error);
+
+        // Check if it's a table not found error
+        if (error.code === '42P01' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+          // Table doesn't exist - fallback to local storage
+          console.log('Database table not found - using local storage');
+
+          // Load from local storage instead
+          const localBooksList = localBooks.getBooks();
+          books = localBooksList.filter(book =>
+            // Filter by user ID if needed
+            !book.user_id || book.user_id === session?.user.id
+          );
+          loadError = '';
+        } else {
+          // Other errors - still try local storage
+          console.log('Database error - falling back to local storage');
+          const localBooksList = localBooks.getBooks();
+          books = localBooksList.filter(book =>
+            !book.user_id || book.user_id === session?.user.id
+          );
+
+          // Only show error if no books in local storage
+          if (books.length === 0) {
+            loadError = 'Unable to connect to database. Books stored locally.';
+          }
+        }
+      } else {
+        // Success from database
+        books = booksData || [];
+
+        // Sync with local storage (merge any local-only books)
+        const localBooksList = localBooks.getBooks();
+        const dbBookIds = new Set(books.map(b => b.id));
+        const localOnlyBooks = localBooksList.filter(book =>
+          !dbBookIds.has(book.id) &&
+          (!book.user_id || book.user_id === session?.user.id)
+        );
+
+        if (localOnlyBooks.length > 0) {
+          console.log('Found local-only books, merging with database results');
+          books = [...books, ...localOnlyBooks];
+        }
       }
 
-      books = booksData || [];
-    filterAndSortBooks();
+      filterAndSortBooks();
     } catch (error) {
       console.error('Failed to load books:', error);
+
+      // Ultimate fallback - just use local storage
+      const localBooksList = localBooks.getBooks();
+      books = localBooksList.filter(book =>
+        !book.user_id || book.user_id === session?.user.id
+      );
+
+      if (books.length === 0) {
+        loadError = 'Unable to load library. Please check your connection.';
+      }
     } finally {
       loading = false;
+      isFirstLoad = false;
     }
   }
 
-  function handleUploadComplete() {
+  async function handleUploadComplete() {
     showUpload = false;
-    loadBooks(); // Refresh the library
+    // Add a small delay to ensure the book is saved
+    setTimeout(() => {
+      loadBooks(); // Refresh the library
+    }, 500);
   }
 
   function filterAndSortBooks() {
@@ -311,10 +372,35 @@
         <LibraryStats {books} />
       {/if}
 
-      {#if loading}
+      {#if loading && isFirstLoad}
         <div class="flex items-center justify-center py-12">
           <div class="loading-spinner w-8 h-8"></div>
-          <span class="ml-3 text-gray-600">Loading your books...</span>
+          <span class="ml-3 text-gray-600">Loading your library...</span>
+        </div>
+      {:else if loadError}
+        <!-- Error state -->
+        <div class="text-center py-16">
+          <div class="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">Unable to Load Library</h3>
+          <p class="text-gray-600 mb-6">{loadError}</p>
+          <div class="flex justify-center space-x-3">
+            <button
+              on:click={loadBooks}
+              class="btn btn-primary"
+            >
+              Try Again
+            </button>
+            <button
+              on:click={() => showUpload = true}
+              class="btn btn-secondary"
+            >
+              Upload a Book
+            </button>
+          </div>
         </div>
       {:else if filteredBooks.length === 0 && books.length > 0}
         <!-- No results -->

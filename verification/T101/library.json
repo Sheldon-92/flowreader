@@ -1,0 +1,20 @@
+[
+  {
+    "id": "book_87654321-dcba-4321-8765-4321567890ba",
+    "title": "Test Book",
+    "author": "Test Author",
+    "fileName": "test.epub",
+    "uploadedAt": "2025-09-19T21:22:30.000Z",
+    "lastReadAt": "2025-09-19T21:30:00.000Z",
+    "progress": {
+      "currentChapter": 2,
+      "percentage": 15.5
+    },
+    "metadata": {
+      "chapters": 12,
+      "totalPages": 234,
+      "language": "en",
+      "publisher": "Test Publisher"
+    }
+  }
+]

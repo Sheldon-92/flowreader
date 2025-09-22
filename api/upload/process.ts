@@ -1,7 +1,8 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { convertVercelRequest, authenticateRequestWithSecurity, enhancedAuth } from './_lib/auth-enhanced';
-import { uploadRateLimiter, withRateLimit } from './_lib/rate-limiter';
-import { supabaseAdmin } from './_lib/auth';
+import { convertVercelRequest, authenticateRequestWithSecurity, enhancedAuth } from '../_lib/auth-enhanced';
+import { uploadRateLimiter, withRateLimit } from '../_lib/rate-limiter';
+import { supabaseAdmin } from '../_lib/auth';
+import { EPUBProcessor } from '../_lib/epub-processor';
 import * as path from 'path';
 
 // Main handler with rate limiting applied first
@@ -175,7 +176,37 @@ async function processHandler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Process EPUB file with enhanced security logging
+    // Check if book already exists (idempotency check)
+    const { data: existingBook } = await supabaseAdmin
+      .from('books')
+      .select('id, processed')
+      .eq('owner_id', userId)
+      .eq('file_path', filePath)
+      .single();
+
+    if (existingBook && existingBook.processed) {
+      // Book already processed, return existing data
+      await enhancedAuth.logSecurityEvent(
+        'file_already_processed',
+        userId,
+        enhancedAuth['extractSecurityContext'](request),
+        { endpoint: 'upload/process', filePath, bookId: existingBook.id },
+        'low'
+      );
+
+      const { data: chapters } = await supabaseAdmin
+        .from('chapters')
+        .select('id')
+        .eq('book_id', existingBook.id);
+
+      return res.status(200).json({
+        message: 'Book already processed',
+        bookId: existingBook.id,
+        chaptersCount: chapters?.length || 0
+      });
+    }
+
+    // Process EPUB file with real parser
     const timestamp = Date.now();
 
     // Log successful file processing start
@@ -186,104 +217,81 @@ async function processHandler(req: VercelRequest, res: VercelResponse) {
       { endpoint: 'upload/process', filePath, fileName, fileSize },
       'low'
     );
-    
-    // Mock processing result
-    const mockBook = {
-      id: 'book_' + timestamp,
-      title: fileName.replace('.epub', '').replace(/[_-]/g, ' '),
-      author: 'Unknown Author',
-      owner_id: userId,
-      file_path: filePath,
-      file_size: fileSize,
-      metadata: {
-        word_count: Math.floor(fileSize / 5), // Rough estimate
-        estimated_reading_time: Math.floor(fileSize / 5 / 250), // 250 WPM
-        chapter_count: Math.floor(Math.random() * 20) + 5,
-      },
-      reading_progress: {
-        current_cfi: '',
-        current_chapter: 0,
-        percentage: 0,
-        last_read: null
-      },
-      upload_date: new Date().toISOString()
-    };
 
-    // Insert book record with RLS enforcement
-    const { data: book, error: insertError } = await supabaseAdmin
-      .from('books')
-      .insert(mockBook)
-      .select()
-      .single();
+    try {
+      // Use real EPUB processor
+      const processor = new EPUBProcessor();
+      const fileBufferData = Buffer.from(fileBuffer);
 
-    if (insertError) {
+      const processingResult = await processor.processUploadedEPUB(
+        fileBufferData,
+        fileName,
+        userId
+      );
+
+      // Update the file path in the book record if needed
+      if (processingResult.book.file_path !== filePath) {
+        await supabaseAdmin
+          .from('books')
+          .update({ file_path: filePath })
+          .eq('id', processingResult.book.id);
+      }
+
+      // Mark book as processed
+      await supabaseAdmin
+        .from('books')
+        .update({ processed: true })
+        .eq('id', processingResult.book.id);
+
+      // Log successful processing
       await enhancedAuth.logSecurityEvent(
-        'database_error',
+        'file_processing_completed',
         userId,
         enhancedAuth['extractSecurityContext'](request),
-        { endpoint: 'upload/process', operation: 'book_insert', error: insertError.message },
+        {
+          endpoint: 'upload/process',
+          bookId: processingResult.book.id,
+          filePath,
+          fileName,
+          chaptersCount: processingResult.chaptersCount,
+          processingTime: processingResult.processingStats.processingTime,
+          wordCount: processingResult.processingStats.wordCount
+        },
+        'low'
+      );
+
+      return res.status(200).json({
+        success: true,
+        book: {
+          id: processingResult.book.id,
+          title: processingResult.book.title,
+          author: processingResult.book.author,
+          chaptersCount: processingResult.chaptersCount,
+          processingTime: Date.now() - timestamp
+        },
+        stats: processingResult.processingStats
+      });
+
+    } catch (processingError) {
+      // Log processing error
+      await enhancedAuth.logSecurityEvent(
+        'file_processing_error',
+        userId,
+        enhancedAuth['extractSecurityContext'](request),
+        {
+          endpoint: 'upload/process',
+          filePath,
+          fileName,
+          error: processingError instanceof Error ? processingError.message : 'Unknown error'
+        },
         'high'
       );
+
       return res.status(500).json({
-        error: 'Failed to save book',
-        message: 'An error occurred while saving the book to the database'
+        error: 'File processing failed',
+        message: processingError instanceof Error ? processingError.message : 'An error occurred while processing the EPUB file'
       });
     }
-
-    // Create mock chapters
-    const chapters = [];
-    const chapterCount = mockBook.metadata.chapter_count;
-    
-    for (let i = 0; i < chapterCount; i++) {
-      chapters.push({
-        book_id: book.id,
-        idx: i,
-        title: 'Chapter ' + (i + 1),
-        text: 'This is the content of chapter ' + (i + 1) + '. In a real implementation, this would be extracted from the EPUB file and properly parsed.',
-        word_count: Math.floor(Math.random() * 2000) + 500
-      });
-    }
-
-    const { error: chaptersError } = await supabaseAdmin
-      .from('chapters')
-      .insert(chapters);
-
-    if (chaptersError) {
-      await enhancedAuth.logSecurityEvent(
-        'database_warning',
-        userId,
-        enhancedAuth['extractSecurityContext'](request),
-        { endpoint: 'upload/process', operation: 'chapters_insert', error: chaptersError.message },
-        'medium'
-      );
-      // Continue anyway - book is created
-    }
-
-    // Log successful processing completion
-    await enhancedAuth.logSecurityEvent(
-      'file_processing_completed',
-      userId,
-      enhancedAuth['extractSecurityContext'](request),
-      {
-        endpoint: 'upload/process',
-        bookId: book.id,
-        processingTime: Date.now() - timestamp,
-        fileSize,
-        chaptersCount: chapterCount
-      },
-      'low'
-    );
-
-    return res.status(200).json({
-      success: true,
-      book: {
-        id: book.id,
-        title: book.title,
-        author: book.author,
-        chaptersCount: chapterCount,
-        processingTime: Date.now() - timestamp
-      }
-    });
 
   } catch (error) {
     console.error('Process endpoint error:', error);

@@ -1,1 +1,4 @@
 node_modules
+
+# SvelteKit build output
+apps/web/.svelte-kit/

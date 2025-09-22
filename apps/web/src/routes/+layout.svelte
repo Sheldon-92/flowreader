@@ -3,12 +3,12 @@
   import '../app.css';
   import { onMount } from 'svelte';
   import { invalidate } from '$app/navigation';
-  import { createSupabaseClient } from '$lib/supabase';
+  import { supabase } from '$lib/supabase';
   import { page } from '$app/stores';
 
   export let data;
 
-  $: ({ supabase, session } = data);
+  $: ({ session } = data);
 
   onMount(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {

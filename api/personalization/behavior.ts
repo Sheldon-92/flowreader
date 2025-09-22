@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { requireAuthWithSecurity, convertVercelRequest, enhancedAuth } from '../_lib/auth-enhanced.js';
-import { supabaseAdminAdmin } from '../_lib/auth.js';
+import { supabaseAdmin } from '../_lib/auth.js';
 import type {
   UserBehaviorMetrics,
   PersonalizationApiResponse
@@ -246,7 +246,7 @@ class BehaviorTrackingService {
       await this.ensureBehaviorTable();
 
       // Insert behaviors
-      const { data, error } = await supabaseAdminAdmin
+      const { data, error } = await supabaseAdmin
         .from('anonymous_behaviors')
         .insert(behaviorRecords);
 
@@ -268,7 +268,7 @@ class BehaviorTrackingService {
    */
   private async getSessionMetrics(sessionId: string): Promise<any> {
     try {
-      const { data, error } = await supabaseAdminAdmin
+      const { data, error } = await supabaseAdmin
         .from('anonymous_behaviors')
         .select('*')
         .eq('session_id', sessionId)
@@ -307,7 +307,7 @@ class BehaviorTrackingService {
     try {
       // This would typically be handled by database migrations
       // For now, we'll create the table if it doesn't exist
-      const { error } = await supabaseAdminAdmin.rpc('create_table_if_not_exists', {
+      const { error } = await supabaseAdmin.rpc('create_table_if_not_exists', {
         table_name: 'anonymous_behaviors',
         table_definition: `
           id SERIAL PRIMARY KEY,
@@ -332,7 +332,7 @@ class BehaviorTrackingService {
    */
   async cleanupExpiredBehaviors(): Promise<number> {
     try {
-      const { data, error } = await supabaseAdminAdmin
+      const { data, error } = await supabaseAdmin
         .from('anonymous_behaviors')
         .delete()
         .lt('expires_at', new Date().toISOString());

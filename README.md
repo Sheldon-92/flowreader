@@ -1,7 +1,9 @@
 # FlowReader - Your Intelligent Reading Companion
 
+![Version](https://img.shields.io/badge/Version-v0.9--personal--ready-blue)
 ![Status](https://img.shields.io/badge/Status-Personal%20Use%20Ready-green)
 ![Development](https://img.shields.io/badge/Development-Paused%20for%20Expansion-yellow)
+![License](https://img.shields.io/badge/License-MIT-orange)
 
 > **📚 Personal Use Ready** - Core features complete and stable for individual use
 > **⏸️ Expansion Paused** - Enterprise and commercialization features on hold

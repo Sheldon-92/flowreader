@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { requireAuthWithSecurity, convertVercelRequest, enhancedAuth } from '../_lib/auth-enhanced.js';
-import { supabaseAdminAdmin } from '../_lib/auth.js';
+import { supabaseAdmin } from '../_lib/auth.js';
 import type {
   PersonalizationContext,
   PersonalizationRecommendation,

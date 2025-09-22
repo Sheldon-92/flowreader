@@ -3,7 +3,7 @@ import { RAGProcessor } from '../_lib/rag-processor.js';
 import { KnowledgeEnhancer, type KnowledgeEnhanceRequest } from '../_lib/knowledge-enhancer.js';
 import { requireAuthWithSecurity, convertVercelRequest, enhancedAuth } from '../_lib/auth-enhanced.js';
 import { chatRateLimiter } from '../_lib/rate-limiter.js';
-import { supabaseAdminAdmin } from '../_lib/auth.js';
+import { supabaseAdmin } from '../_lib/auth.js';
 
 // Intent-based request interface
 interface ContextActionRequest {
@@ -114,7 +114,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // For legacy requests, we now always use the authenticated user ID (no validation needed)
 
     // Get book and verify access with proper user isolation
-    const { data: book, error: bookError } = await supabaseAdminAdmin
+    const { data: book, error: bookError } = await supabaseAdmin
       .from('books')
       .select('*')
       .eq('id', bookId)
@@ -195,7 +195,8 @@ async function handleIntentRequest(
   selection: any,
   query?: string,
   targetLang?: string,
-  enhanceType?: string
+  enhanceType?: string,
+  userId?: string
 ) {
   try {
     // Handle knowledge enhancement intent
@@ -215,7 +216,7 @@ async function handleIntentRequest(
     }
 
     // Build context for intent
-    const context = await buildIntentContext(supabaseAdmin, book, selection, query, intent, actualUserId);
+    const context = await buildIntentContext(supabaseAdmin, book, selection, query, intent, userId);
 
     // Generate system and user prompts based on intent
     const { systemPrompt, userPrompt } = buildIntentPrompts(intent, selection?.text, query, targetLang, context);

@@ -3,12 +3,14 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import type { PageData } from './$types';
+  import { supabase } from '$lib/supabase';
+  import { localBooks } from '$lib/stores/localBooks';
   import SelectionPopover from '$lib/components/SelectionPopover.svelte';
   import ContextSidePanel from '$lib/components/ContextSidePanel.svelte';
   import SaveNoteModal from '$lib/components/SaveNoteModal.svelte';
 
   export let data: PageData;
-  $: ({ supabase, session, bookId } = data);
+  $: ({ session, bookId } = data);
 
   let book = null;
   let chapters = [];
@@ -366,7 +368,7 @@
                 class:max-w-5xl={readingWidth === 'normal'}
                 class:max-w-none={readingWidth === 'wide'}
               >
-                {@html currentChapter.text.replace(/\n/g, '</p><p>')}
+                {@html currentChapter.content.replace(/\n/g, '</p><p>')}
               </div>
               
               <!-- Chapter Navigation -->

@@ -10,7 +10,7 @@ const config = {
       runtime: 'nodejs18.x'
     }),
     env: {
-      publicPrefix: 'VITE_'
+      publicPrefix: 'PUBLIC_'
     },
     alias: {
       $lib: 'src/lib',

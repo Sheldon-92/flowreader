@@ -10,6 +10,15 @@ export default defineConfig({
     global: 'globalThis'
   },
   optimizeDeps: {
-    include: ['epub.js']
+    include: ['epub.js'],
+    exclude: ['@supabase/supabase-js']
+  },
+  resolve: {
+    alias: {
+      stream: 'stream-browserify'
+    }
+  },
+  ssr: {
+    noExternal: ['@supabase/supabase-js']
   }
 });

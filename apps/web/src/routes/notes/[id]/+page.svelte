@@ -162,15 +162,15 @@
             </Badge>
 
             {#if note.source === 'auto' && note.meta}
-              {@const autoMeta = note.meta as AutoNoteMeta}
-              {#if autoMeta.type}
-                <Badge class={getTypeColor(autoMeta.type)}>
-                  {autoMeta.type}
+              
+              {#if note.meta.type}
+                <Badge class={getTypeColor(note.meta.type)}>
+                  {note.meta.type}
                 </Badge>
               {/if}
-              {#if autoMeta.confidence !== undefined}
-                <Badge class={getConfidenceColor(autoMeta.confidence)}>
-                  {Math.round(autoMeta.confidence * 100)}% confidence
+              {#if note.meta.confidence !== undefined}
+                <Badge class={getConfidenceColor(note.meta.confidence)}>
+                  {Math.round(note.meta.confidence * 100)}% confidence
                 </Badge>
               {/if}
             {/if}
@@ -227,23 +227,23 @@
 
     <!-- Metadata (for auto-generated notes) -->
     {#if note.source === 'auto' && note.meta}
-      {@const autoMeta = note.meta as AutoNoteMeta}
+      
       <Card class="p-6">
         <h3 class="font-medium text-gray-900 mb-4">Generation Details</h3>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Generation method -->
-          {#if autoMeta.generationMethod}
+          {#if note.meta.generationMethod}
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
                 Generation Method
               </label>
-              <p class="text-gray-900">{formatGenerationMethod(autoMeta.generationMethod)}</p>
+              <p class="text-gray-900">{formatGenerationMethod(note.meta.generationMethod)}</p>
             </div>
           {/if}
 
           <!-- Confidence score -->
-          {#if autoMeta.confidence !== undefined}
+          {#if note.meta.confidence !== undefined}
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
                 Confidence Score
@@ -251,54 +251,54 @@
               <div class="flex items-center gap-2">
                 <div class="w-full bg-gray-200 rounded-full h-2">
                   <div
-                    class="h-2 rounded-full {autoMeta.confidence >= 0.8 ? 'bg-green-600' : autoMeta.confidence >= 0.6 ? 'bg-yellow-600' : 'bg-red-600'}"
-                    style="width: {autoMeta.confidence * 100}%"
+                    class="h-2 rounded-full {note.meta.confidence >= 0.8 ? 'bg-green-600' : note.meta.confidence >= 0.6 ? 'bg-yellow-600' : 'bg-red-600'}"
+                    style="width: {note.meta.confidence * 100}%"
                   ></div>
                 </div>
-                <span class="text-sm font-medium">{Math.round(autoMeta.confidence * 100)}%</span>
+                <span class="text-sm font-medium">{Math.round(note.meta.confidence * 100)}%</span>
               </div>
             </div>
           {/if}
 
           <!-- Context scope -->
-          {#if autoMeta.contextScope}
+          {#if note.meta.contextScope}
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
                 Context Scope
               </label>
-              <p class="text-gray-900 capitalize">{autoMeta.contextScope.replace('_', ' ')}</p>
+              <p class="text-gray-900 capitalize">{note.meta.contextScope.replace('_', ' ')}</p>
             </div>
           {/if}
 
           <!-- Intent -->
-          {#if autoMeta.intent}
+          {#if note.meta.intent}
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
                 Intent
               </label>
-              <p class="text-gray-900 capitalize">{autoMeta.intent}</p>
+              <p class="text-gray-900 capitalize">{note.meta.intent}</p>
             </div>
           {/if}
 
           <!-- Position information -->
-          {#if autoMeta.position}
+          {#if note.meta.position}
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
                 Text Position
               </label>
               <p class="text-gray-900">
-                {#if autoMeta.position.start !== undefined}
-                  Characters {autoMeta.position.start}-{autoMeta.position.end || autoMeta.position.start}
+                {#if note.meta.position.start !== undefined}
+                  Characters {note.meta.position.start}-{note.meta.position.end || note.meta.position.start}
                 {/if}
-                {#if autoMeta.position.chapterId}
-                  in chapter {autoMeta.position.chapterId}
+                {#if note.meta.position.chapterId}
+                  in chapter {note.meta.position.chapterId}
                 {/if}
               </p>
             </div>
           {/if}
 
           <!-- Quality score -->
-          {#if autoMeta.qualityScore !== undefined}
+          {#if note.meta.qualityScore !== undefined}
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
                 Quality Score
@@ -307,28 +307,28 @@
                 <div class="w-full bg-gray-200 rounded-full h-2">
                   <div
                     class="h-2 rounded-full bg-purple-600"
-                    style="width: {autoMeta.qualityScore * 100}%"
+                    style="width: {note.meta.qualityScore * 100}%"
                   ></div>
                 </div>
-                <span class="text-sm font-medium">{Math.round(autoMeta.qualityScore * 100)}%</span>
+                <span class="text-sm font-medium">{Math.round(note.meta.qualityScore * 100)}%</span>
               </div>
             </div>
           {/if}
         </div>
 
         <!-- Processing information -->
-        {#if autoMeta.processingInfo}
+        {#if note.meta.processingInfo}
           <div class="mt-6 pt-4 border-t border-gray-200">
             <h4 class="font-medium text-gray-900 mb-2">Processing Information</h4>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
               <div>
-                <span class="font-medium">Tokens:</span> {autoMeta.processingInfo.tokens}
+                <span class="font-medium">Tokens:</span> {note.meta.processingInfo.tokens}
               </div>
               <div>
-                <span class="font-medium">Processing Time:</span> {autoMeta.processingInfo.processingTime}ms
+                <span class="font-medium">Processing Time:</span> {note.meta.processingInfo.processingTime}ms
               </div>
               <div>
-                <span class="font-medium">Method:</span> {formatGenerationMethod(autoMeta.processingInfo.method)}
+                <span class="font-medium">Method:</span> {formatGenerationMethod(note.meta.processingInfo.method)}
               </div>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { requireAuthWithSecurity, convertVercelRequest, enhancedAuth } from '../_lib/auth-enhanced.js';
-import { supabaseAdminAdmin } from '../_lib/auth.js';
+import { supabaseAdmin } from '../_lib/auth.js';
 import type {
   PersonalizationMetrics,
   PersonalizationApiResponse,
@@ -154,7 +154,7 @@ class PersonalizationMetricsService {
       }));
 
       // Insert metrics
-      const { data, error } = await supabaseAdminAdmin
+      const { data, error } = await supabaseAdmin
         .from('personalization_metrics')
         .insert(metricRecords);
 
@@ -255,7 +255,7 @@ class PersonalizationMetricsService {
    */
   private async calculateSessionMetrics(sessionId: string): Promise<any> {
     try {
-      const { data, error } = await supabaseAdminAdmin
+      const { data, error } = await supabaseAdmin
         .from('personalization_metrics')
         .select('*')
         .eq('session_id', sessionId)
@@ -431,7 +431,7 @@ class PersonalizationMetricsService {
   private async ensureMetricsTable(): Promise<void> {
     try {
       // This would typically be handled by database migrations
-      const { error } = await supabaseAdminAdmin.rpc('create_table_if_not_exists', {
+      const { error } = await supabaseAdmin.rpc('create_table_if_not_exists', {
         table_name: 'personalization_metrics',
         table_definition: `
           id SERIAL PRIMARY KEY,
@@ -457,7 +457,7 @@ class PersonalizationMetricsService {
    */
   async cleanupExpiredMetrics(): Promise<number> {
     try {
-      const { data, error } = await supabaseAdminAdmin
+      const { data, error } = await supabaseAdmin
         .from('personalization_metrics')
         .delete()
         .lt('expires_at', new Date().toISOString());

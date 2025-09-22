@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import type { PageData } from './$types';
+  import { supabase } from '$lib/supabase';
   import type { Note } from '@flowreader/shared';
   import Card from '$lib/components/ui/Card.svelte';
   import Button from '$lib/components/ui/Button.svelte';
@@ -10,7 +11,7 @@
   import Badge from '$lib/components/ui/Badge.svelte';
 
   export let data: PageData;
-  $: ({ supabase, session, bookId } = data);
+  $: ({ session, bookId } = data);
 
   let book: any = null;
   let notes: Note[] = [];
