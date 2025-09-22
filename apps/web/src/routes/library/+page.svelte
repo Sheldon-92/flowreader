@@ -29,10 +29,7 @@
   let loadError = '';
   let isFirstLoad = true;
 
-  // Redirect if not authenticated
-  $: if (!session) {
-    goto('/auth/login');
-  }
+  // No authentication required for personal use
 
   onMount(async () => {
     if (session) {

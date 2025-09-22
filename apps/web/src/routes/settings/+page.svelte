@@ -14,10 +14,7 @@
   let error = '';
   let success = '';
 
-  // Redirect if not authenticated
-  $: if (!session) {
-    goto('/auth/login');
-  }
+  // No authentication required for personal use
 
   async function handleChangePassword() {
     if (!currentPassword || !newPassword || !confirmPassword) {

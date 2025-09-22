@@ -79,11 +79,7 @@
     try {
       loading = true;
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session?.access_token) {
-        goto('/auth/login');
-        return;
-      }
+      // No authentication required for personal use
 
       const url = new URL('/api/notes/search', window.location.origin);
 
@@ -243,11 +239,7 @@
   }
 
   onMount(async () => {
-    if (!session) {
-      goto('/auth/login');
-      return;
-    }
-
+    // No authentication required for personal use
     await loadBooks();
 
     // Perform search if URL has parameters

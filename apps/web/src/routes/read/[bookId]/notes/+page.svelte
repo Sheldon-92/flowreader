@@ -48,11 +48,7 @@
       if (!cursor) loading = true;
       else loadingMore = true;
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session?.access_token) {
-        goto('/auth/login');
-        return;
-      }
+      // No authentication required for personal use
 
       const url = new URL('/api/notes', window.location.origin);
       url.searchParams.set('bookId', bookId);
@@ -122,11 +118,7 @@
   }
 
   onMount(async () => {
-    if (!session) {
-      goto('/auth/login');
-      return;
-    }
-
+    // No authentication required for personal use
     await loadBook();
     await loadNotes();
   });

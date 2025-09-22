@@ -242,10 +242,7 @@
 
   // Add selection listener on mount
   onMount(async () => {
-    if (!session) {
-      goto('/auth/login');
-      return;
-    }
+    // No authentication required for personal use
 
     await loadBook();
 
