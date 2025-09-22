@@ -1,12 +1,9 @@
 import type { PageLoad } from './$types';
-import { redirect } from '@sveltejs/kit';
 
 export const load: PageLoad = async ({ parent, url }) => {
   const { supabase, session } = await parent();
 
-  if (!session) {
-    throw redirect(303, '/auth/login');
-  }
+  // No authentication required for personal use
 
   // Extract search parameters from URL
   const searchParams = {

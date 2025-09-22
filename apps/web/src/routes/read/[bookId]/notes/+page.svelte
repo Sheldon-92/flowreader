@@ -59,7 +59,7 @@
 
       const response = await fetch(url.toString(), {
         headers: {
-          'Authorization': `Bearer ${sessionData.session.access_token}`
+          'Authorization': `Bearer ${session.access_token}`
         }
       });
 

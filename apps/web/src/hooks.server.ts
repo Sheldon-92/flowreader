@@ -1,10 +1,9 @@
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 import { createServerClient } from '@supabase/ssr';
 import type { Handle } from '@sveltejs/kit';
-import { redirect } from '@sveltejs/kit';
 
 export const handle: Handle = async ({ event, resolve }) => {
-  // Create Supabase server client
+  // Create Supabase server client for compatibility
   event.locals.supabase = createServerClient(
     PUBLIC_SUPABASE_URL,
     PUBLIC_SUPABASE_ANON_KEY,
@@ -17,26 +16,19 @@ export const handle: Handle = async ({ event, resolve }) => {
     }
   );
 
-  // Helper function to get session
+  // Mock session function for personal use - no authentication required
   event.locals.getSession = async () => {
-    const {
-      data: { session }
-    } = await event.locals.supabase.auth.getSession();
-    return session;
+    return {
+      user: {
+        id: 'local-user',
+        email: 'personal@local.com',
+        created_at: new Date().toISOString()
+      },
+      access_token: 'mock-token'
+    };
   };
 
-  // Protected routes that require authentication
-  const protectedRoutes = ['/library', '/reader', '/settings'];
-  const isProtectedRoute = protectedRoutes.some(route => 
-    event.url.pathname.startsWith(route)
-  );
-
-  if (isProtectedRoute) {
-    const session = await event.locals.getSession();
-    if (!session) {
-      throw redirect(302, '/auth/login');
-    }
-  }
+  // No authentication checks - personal use only
 
   return resolve(event, {
     filterSerializedResponseHeaders(name) {

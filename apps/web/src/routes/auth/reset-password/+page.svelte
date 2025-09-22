@@ -11,12 +11,47 @@
   let success = false;
 
   onMount(async () => {
-    // Handle the password reset token from URL
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const accessToken = hashParams.get('access_token');
-    const refreshToken = hashParams.get('refresh_token');
+    console.log('Reset password page loaded');
+    console.log('Current URL:', window.location.href);
+    console.log('Hash:', window.location.hash);
+    console.log('Search:', window.location.search);
+
+    // Try multiple ways to get the reset tokens
+    let accessToken = null;
+    let refreshToken = null;
+    let resetType = null;
+
+    // Method 1: Check hash parameters (Supabase default)
+    if (window.location.hash) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      accessToken = hashParams.get('access_token');
+      refreshToken = hashParams.get('refresh_token');
+      resetType = hashParams.get('type');
+      console.log('Hash params:', { accessToken: accessToken ? 'Present' : 'Missing', refreshToken: refreshToken ? 'Present' : 'Missing', type: resetType });
+    }
+
+    // Method 2: Check query parameters as fallback
+    if (!accessToken && window.location.search) {
+      const queryParams = new URLSearchParams(window.location.search);
+      accessToken = queryParams.get('access_token');
+      refreshToken = queryParams.get('refresh_token');
+      resetType = queryParams.get('type');
+      console.log('Query params:', { accessToken: accessToken ? 'Present' : 'Missing', refreshToken: refreshToken ? 'Present' : 'Missing', type: resetType });
+    }
+
+    // Method 3: Handle automatic session recovery
+    if (!accessToken) {
+      console.log('No tokens found in URL, checking current session...');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        console.log('Found existing session:', session.user?.email);
+        // User is already authenticated, allow password reset
+        return;
+      }
+    }
 
     if (accessToken && refreshToken) {
+      console.log('Setting session with tokens...');
       const { error: sessionError } = await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken
@@ -27,7 +62,9 @@
         error = 'Invalid or expired reset link';
         return;
       }
+      console.log('Session set successfully');
     } else {
+      console.log('No valid tokens found');
       error = 'Invalid reset link. Please request a new password reset.';
     }
   });
