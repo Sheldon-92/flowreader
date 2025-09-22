@@ -16,8 +16,26 @@
     debugInfo.environment = import.meta.env.MODE || 'unknown';
     debugInfo.timestamp = new Date().toISOString();
 
-    // Test URL reachability
+    // Detailed validation
+    console.log('=== DETAILED DEBUG INFO ===');
+    console.log('Supabase URL raw:', PUBLIC_SUPABASE_URL);
+    console.log('Supabase URL length:', PUBLIC_SUPABASE_URL?.length);
+    console.log('Supabase URL type:', typeof PUBLIC_SUPABASE_URL);
+    console.log('API Key raw:', PUBLIC_SUPABASE_ANON_KEY);
+    console.log('API Key length:', PUBLIC_SUPABASE_ANON_KEY?.length);
+    console.log('API Key type:', typeof PUBLIC_SUPABASE_ANON_KEY);
+
+    // Check for invalid characters
+    if (PUBLIC_SUPABASE_URL) {
+      const urlPattern = /^https?:\/\/.+/;
+      console.log('URL matches pattern:', urlPattern.test(PUBLIC_SUPABASE_URL));
+      console.log('URL contains newlines:', PUBLIC_SUPABASE_URL.includes('\n'));
+      console.log('URL contains spaces:', PUBLIC_SUPABASE_URL.includes(' '));
+    }
+
+    // Test URL reachability with better error handling
     try {
+      console.log('Testing URL:', `${PUBLIC_SUPABASE_URL}/rest/v1/`);
       const response = await fetch(`${PUBLIC_SUPABASE_URL}/rest/v1/`, {
         method: 'HEAD',
         headers: {
@@ -28,6 +46,8 @@
       console.log('Supabase test response:', response.status, response.statusText);
     } catch (error) {
       console.error('Supabase test failed:', error);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
       debugInfo.urlReachable = false;
     }
 
