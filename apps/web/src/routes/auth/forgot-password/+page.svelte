@@ -21,13 +21,25 @@
     try {
       loading = true;
       error = '';
+      console.log('Attempting to reset password for:', email);
+      console.log('Supabase URL:', import.meta.env.PUBLIC_SUPABASE_URL);
 
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`
       });
 
+      console.log('Reset password response:', { resetError });
+
       if (resetError) {
-        error = resetError.message;
+        // Handle specific error cases
+        if (resetError.message.includes('fetch')) {
+          error = 'Network error. Please check your internet connection and try again.';
+        } else if (resetError.message.includes('Invalid')) {
+          error = 'Please enter a valid email address.';
+        } else {
+          error = resetError.message;
+        }
+        console.error('Reset password error:', resetError);
         return;
       }
 

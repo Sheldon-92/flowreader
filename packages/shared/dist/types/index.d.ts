@@ -20,7 +20,7 @@ export interface UserPreferences {
 }
 export interface Book {
     id: string;
-    user_id: string;
+    owner_id: string;
     title: string;
     author: string;
     file_path: string;
@@ -48,7 +48,7 @@ export interface Chapter {
     book_id: string;
     idx: number;
     title: string;
-    text: string;
+    content: string;
     word_count: number;
     created_at: string;
 }
@@ -77,19 +77,64 @@ export interface Note {
     userId: string;
     bookId: string;
     chapterId?: string;
-    selection?: {
-        text: string;
+    selection?: TextSelection;
+    content: string;
+    source?: 'manual' | 'auto';
+    meta?: NoteMeta;
+    createdAt: string;
+}
+export interface TextSelection {
+    text: string;
+    start?: number;
+    end?: number;
+    chapterId?: string;
+}
+export interface NoteMeta {
+    intent?: IntentType;
+    [key: string]: any;
+}
+export type IntentType = 'translate' | 'explain' | 'analyze' | 'ask' | 'enhance';
+export interface AutoNoteRequest {
+    bookId: string;
+    selection?: TextSelection;
+    intent?: IntentType;
+    contextScope?: 'selection' | 'recent_dialog' | 'chapter';
+    options?: AutoNoteOptions;
+}
+export interface AutoNoteOptions {
+    maxLength?: number;
+    includeMetrics?: boolean;
+}
+export interface AutoNoteResponse extends Note {
+    source: 'auto';
+    meta: AutoNoteMeta;
+    metrics?: NoteMetrics;
+}
+export interface AutoNoteMeta extends NoteMeta {
+    generationMethod: 'knowledge_enhancement' | 'dialog_summary' | 'context_analysis';
+    confidence: number;
+    sourceSelection?: TextSelection;
+    contextScope?: string;
+    type?: string;
+    position?: {
+        chapterId?: string;
         start?: number;
         end?: number;
     };
-    content: string;
-    source?: 'manual' | 'ai';
-    meta?: {
-        intent?: 'translate' | 'explain' | 'analyze' | 'ask';
-        [key: string]: any;
+    qualityScore?: number;
+    processingInfo?: {
+        method: GenerationMethod;
+        tokens: number;
+        processingTime: number;
     };
-    createdAt: string;
 }
+export interface NoteMetrics {
+    tokens: number;
+    cost: number;
+    processingTime: number;
+}
+export type ContextScope = 'selection' | 'recent_dialog' | 'chapter';
+export type GenerationMethod = 'knowledge_enhancement' | 'dialog_summary' | 'context_analysis';
 export interface AIConversation {
     id: string;
     book_id: string;
@@ -201,6 +246,65 @@ export interface ChatStreamRequest {
     selection: string;
     message: string;
     conversation_id?: string;
+}
+export type EnhanceType = 'concept' | 'historical' | 'cultural' | 'general';
+export interface KnowledgeEnhanceRequest {
+    bookId: string;
+    intent: 'enhance';
+    selection: {
+        text: string;
+        start?: number;
+        end?: number;
+        chapterId?: string;
+    };
+    enhanceType?: EnhanceType;
+}
+export interface KnowledgeConcept {
+    term: string;
+    definition: string;
+    context: string;
+}
+export interface HistoricalReference {
+    event: string;
+    date: string;
+    relevance: string;
+}
+export interface CulturalReference {
+    reference: string;
+    origin: string;
+    significance: string;
+}
+export interface KnowledgeConnection {
+    topic: string;
+    relationship: string;
+}
+export interface KnowledgeEnhancement {
+    type: 'enhancement';
+    data: {
+        concepts?: KnowledgeConcept[];
+        historical?: HistoricalReference[];
+        cultural?: CulturalReference[];
+        connections?: KnowledgeConnection[];
+    };
+    summary: string;
+    confidence: number;
+    enhanceType: EnhanceType;
+    qualityMetrics?: {
+        accuracy: number;
+        relevance: number;
+        completeness: number;
+        clarity: number;
+        overall: number;
+    };
+}
+export interface KnowledgeEnhanceResponse {
+    enhancement: KnowledgeEnhancement;
+    usage: {
+        tokens_used: number;
+        cost_usd: number;
+        enhancement_type: EnhanceType;
+    };
+    timestamp: string;
 }
 export declare const ERROR_CODES: {
     readonly TOO_LARGE: "TOO_LARGE";
