@@ -16,7 +16,16 @@ export const supabase = createClient<Database>(
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: true
+      detectSessionInUrl: true,
+      flowType: 'pkce'
+    },
+    global: {
+      headers: {
+        'x-client-info': 'flowreader-web'
+      }
+    },
+    db: {
+      schema: 'public'
     }
   }
 );
