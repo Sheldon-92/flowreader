@@ -23,6 +23,19 @@
       error = '';
       console.log('Attempting to reset password for:', email);
       console.log('Supabase URL:', import.meta.env.PUBLIC_SUPABASE_URL);
+      console.log('Window location:', window.location.origin);
+
+      // Test basic connectivity first
+      try {
+        const response = await fetch(`${import.meta.env.PUBLIC_SUPABASE_URL}/rest/v1/`, {
+          method: 'HEAD'
+        });
+        console.log('Supabase connectivity test:', response.status);
+      } catch (connectError) {
+        console.error('Supabase connectivity failed:', connectError);
+        error = 'Cannot connect to authentication service. Please try again later.';
+        return;
+      }
 
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`
@@ -32,21 +45,33 @@
 
       if (resetError) {
         // Handle specific error cases
-        if (resetError.message.includes('fetch')) {
+        if (resetError.message.includes('fetch') || resetError.message.includes('Failed to fetch')) {
           error = 'Network error. Please check your internet connection and try again.';
         } else if (resetError.message.includes('Invalid')) {
           error = 'Please enter a valid email address.';
+        } else if (resetError.message.includes('Email not confirmed')) {
+          error = 'Please check your email and click any previous confirmation links first.';
+        } else if (resetError.message.includes('rate')) {
+          error = 'Too many requests. Please wait a moment before trying again.';
         } else {
-          error = resetError.message;
+          error = `Reset failed: ${resetError.message}`;
         }
-        console.error('Reset password error:', resetError);
+        console.error('Reset password error details:', {
+          message: resetError.message,
+          status: resetError.status,
+          statusText: resetError.statusText
+        });
         return;
       }
 
       success = true;
     } catch (e) {
-      error = 'An unexpected error occurred';
-      console.error('Reset password error:', e);
+      console.error('Unexpected reset password error:', e);
+      if (e.message.includes('fetch')) {
+        error = 'Network connection error. Please check your internet and try again.';
+      } else {
+        error = `An unexpected error occurred: ${e.message}`;
+      }
     } finally {
       loading = false;
     }
