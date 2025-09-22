@@ -13,6 +13,9 @@
     "lint:fix": "eslint . --ext .js,.ts,.svelte --fix",
     "type-check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.38.0",
